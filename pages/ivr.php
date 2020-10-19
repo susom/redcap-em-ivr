@@ -21,7 +21,7 @@ $module->emDebug("POST FROM TWILIO callSID", $_POST);
 // CALL TEMP STORAGE - PERSISTS THROUGH OUT CALL (starts empty);
 $call_vars 	= $module->getTempStorage($temp_call_storage_key);
 
-// FIRST CONTACT / EMPTY CALL_VARS
+// FIRST CONTACT / EMPTY CALL_VARS / SET UP CALL "SESSION"
 if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "ringing" )){
 	//load script and other setup vars into the call_vars / "SESSION"
 	if($module->loadScript($temp_call_storage_key)){
@@ -29,14 +29,15 @@ if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] ==
 	}
 }
 
-//FROM PREVIOUS STEP AND DIGITS PROCESS (SAVE)
+//IF IT CAME FROM PREVIOUS STEP, THEN PROCESS THE CHOICES, SAVE TO SESSION
 if( !empty($call_vars["previous_step"]) ){
 	$prev_step 	= $call_vars["previous_step"];
 	$field 		= $call_vars["script"][$prev_step];  
+	
 	// MONITOR THE POST FOR [Recording Sid] , [RecordingUrl] and send an email if it is present
 	if(!empty($_POST["RecordingSid"]) && !empty($_POST["RecordingUrl"]) && $field["voicemail"]){
 		$recording_url 	= trim(filter_var($_POST["RecordingUrl"], FILTER_SANITIZE_STRING));
-		// $subject 		= "CA-FACTS IVR VM ($language)";
+		// $subject 		= "Voice Mail Recording";
 		// $msg 	 		= "<a href='".$recording_url."'>Click to listen to voicemail.</a>";
 		// $module->sendEmail($subject, $msg);
 		$choice 		= $recording_url;
@@ -47,24 +48,26 @@ if( !empty($call_vars["previous_step"]) ){
 	$module->setTempStorage($temp_call_storage_key , $rc_var, $rc_val );
 }
 
-// FIND THE CURRENT STEP AND CONSTRUCT THE IVR RESPONSE XML
+// FIND THE CURRENT STEP AND CONSTRUCT THE APPROPRIATE IVR RESPONSE XML
 $response 	= new VoiceResponse;
 $module->getCurrentIVRstep($response, $call_vars);
 
-if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress" && false){
-	// ALL SUBSEQUENT RESPONSES WILL HIT THIS SAME ENDPOINT , DIFFERENTIATE ON "action"
-}
+// if(isset($_POST["CallStatus"]) && $_POST["CallStatus"] == "in-progress" && false){
+// 	// ALL SUBSEQUENT RESPONSES WILL HIT THIS SAME ENDPOINT , DIFFERENTIATE ON "action"
+// }
 
 // ONCE FALLS THROUGH THE REST OF THE SCRIPT, HANG UP
 print($response);
-
 $response->pause(['length' => 1]);
 $response->hangup();
 
 if($call_vars["current_step"] == $call_vars["last_step"]){
 	$all_vars = $module->getTempStorage($temp_call_storage_key);
-	$module->emDebug("LAST STEP, DUMP AND DELETE", $all_vars);
+	
+	//SAVE ALL DATA TO REDCAP
 	$module->IVRHandler($all_vars);
+
+	//REMOVE CALL "SESSION"
     $module->removeTempStorage($temp_call_storage_key);
 }
 exit();

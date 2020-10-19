@@ -27,7 +27,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 		// every page load
     }
     
-
     /** 
      * GET DESIGNATED SCRIPT PROJECT XML
      * @return bool survey url link
@@ -157,8 +156,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }
         $this->emDebug("all the branching affected fields", $causes_branching);
-        // $this->emDebug("before", $last_step["field_name"], $script_dict);
-
 
         $forwards                       = array_reverse($script_dict);
         $descriptive_say_previous_step  = "";
@@ -241,9 +238,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }else if($voicemail){
             $response->say($say_text, $voicelang_opts); 
             $response->record(['timeout' => 10, 'maxLength' => 15, 'transcribe' => 'true', "finishOnKey" => "#"]);
-        }else if(false){
-            $this->IVRHandler($all_vars);
-            $this->removeTempStorage($temp_call_storage_key);
         }else{
             $gather = $response->gather($gather_options); 
             $gather->say($say_text, $voicelang_opts);   
@@ -264,13 +258,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
      * @return bool survey url link
      */
     public function IVRHandler($call_vars) {
-
         $data = array();
         $data["record_id"] = $this->getNextAvailableRecordId(PROJECT_ID);
 
         $script_fieldnames = \REDCap::getFieldNames($this->script_instrument);
         foreach($call_vars as $rc_var => $rc_val){
-            //TODO, instead of manual exclude list, lets use a inclusive get instrument FIELDs list
             if( !in_array($rc_var, $script_fieldnames) ){
                 continue;
             }
