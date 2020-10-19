@@ -1,9 +1,9 @@
 {
-	"name": "ClassNameHere",
+	"name": "Stand Alone REDCap + IVR Module",
 
-	"namespace": "Stanford\\ClassNameHere",
+	"namespace": "Stanford\\IVRStandAlone",
 
-	"description": "A template for a REDCap External Module",
+	"description": "An EM that will work as a standalone in conjunction with its Associated Project to manage an Interactive Voice Response.",
 
 	"documentation": "README.md",
 
@@ -11,6 +11,11 @@
 		{
 			"name": "Andrew Martin",
 			"email": "andy123@stanford.edu",
+			"institution": "Stanford University"
+		},
+		{
+			"name": "Irvin Szeto",
+			"email": "irvins@stanford.edu",
 			"institution": "Stanford University"
 		}
 	],
@@ -25,7 +30,11 @@
 
 	"links": {
 		"project": [
-
+			{
+				"name": "IVR API Instructions",
+				"icon": "gear",
+				"url": "pages/instructions.php"
+			}
 		],
 		"control-center": [
 
@@ -33,10 +42,163 @@
 	},
 
 	"no-auth-pages": [
-
+		"pages/ivr"
 	],
 
 	"project-settings": [
+		{
+			"key": "active_instrument",
+			"name": "<b>Instrument containing Script</b>",
+			"required": true,
+			"type": "form-list"
+		},
+		{
+			"key": "ivr_voice",
+			"name": "<b>IVR Voice - Man or Woman</b>",
+			"required": true,
+			"type": "dropdown",
+            "choices":[
+                {
+                  "name" : "Man",
+                  "value" : "man"
+                },
+                {
+                  "name" : "Woman",
+                  "value" : "woman"
+				},
+                {
+                  "name" : "Alice Only",
+                  "value" : "Alice Only"
+				}
+				,{"name" : "(Polly Danish M)", "value" : "Polly.Mads"}
+				,{"name" : "(Polly Danish F)", "value" : "Polly.Naja"}
+				,{"name" : "(Polly Dutch F)", "value" : "Polly.Lotte"}
+				,{"name" : "(Polly Dutch M)", "value" : "Polly.Ruben"}
+				,{"name" : "(Polly English Aus F)", "value" : "Polly.Nicole"}
+				,{"name" : "(Polly English Aus M)", "value" : "Polly.Russell"}
+				,{"name" : "(Polly English UK F)", "value" : "Polly.Amy"}
+				,{"name" : "(Polly English UK M)", "value" : "Polly.Brian"}
+				,{"name" : "(Polly English UK F)", "value" : "Polly.Emma"}
+				,{"name" : "(Polly English Indian F)", "value" : "Polly.Raveena"}
+				,{"name" : "(Polly English US F)", "value" : "Polly.Ivy"}
+				,{"name" : "(Polly English US F)", "value" : "Polly.Joanna"}
+				,{"name" : "(Polly English US M)", "value" : "Polly.Joey"}
+				,{"name" : "(Polly English US M)", "value" : "Polly.Justin"}
+				,{"name" : "(Polly English US F)", "value" : "Polly.Kendra"}
+				,{"name" : "(Polly English US F)", "value" : "Polly.Kimberly"}
+				,{"name" : "(Polly English US M)", "value" : "Polly.Matthew"}
+				,{"name" : "(Polly English US F)", "value" : "Polly.Salli"}
+				,{"name" : "(Polly English Welsh M)", "value" : "Polly.Geraint"}
+				,{"name" : "(Polly French F)", "value" : "Polly.Celine"}
+				,{"name" : "(Polly French M)", "value" : "Polly.Mathieu"}
+				,{"name" : "(Polly French Canadian F)", "value" : "Polly.Chantal"}
+				,{"name" : "(Polly German M)", "value" : "Polly.Hans"}
+				,{"name" : "(Polly German F)", "value" : "Polly.Marlene"}
+				,{"name" : "(Polly German F)", "value" : "Polly.Vicki"}
+				,{"name" : "(Polly Icelandic F)", "value" : "Polly.Dora"}
+				,{"name" : "(Polly Icelandic M)", "value" : "Polly.Karl"}
+				,{"name" : "(Polly Italian F)", "value" : "Polly.Carla"}
+				,{"name" : "(Polly Italian M)", "value" : "Polly.Giorgio"}
+				,{"name" : "(Polly Japanese F)", "value" : "Polly.Mizuki"}
+				,{"name" : "(Polly Japanese M)", "value" : "Polly.Takumi"}
+				,{"name" : "(Polly Norwegian F)", "value" : "Polly.Liv"}
+				,{"name" : "(Polly Polish M)", "value" : "Polly.Jacek"}
+				,{"name" : "(Polly Polish M)", "value" : "Polly.Jan"}
+				,{"name" : "(Polly Polish F)", "value" : "Polly.Ewa"}
+				,{"name" : "(Polly Polish F)", "value" : "Polly.Maja"}
+				,{"name" : "(Polly Portuguese Brazil M)", "value" : "Polly.Ricardo"}
+				,{"name" : "(Polly Portuguese Brazil F)", "value" : "Polly.Vitoria"}
+				,{"name" : "(Polly Portuguese EU M)", "value" : "Polly.Cristiano"}
+				,{"name" : "(Polly Portuguese EU F)", "value" : "Polly.Ines"}
+				,{"name" : "(Polly Romanian F)", "value" : "Polly.Carmen"}
+				,{"name" : "(Polly Russian M)", "value" : "Polly.Maxim"}
+				,{"name" : "(Polly Russian F)", "value" : "Polly.Tatyana"}
+				,{"name" : "(Polly Spanish Castilan F)", "value" : "Polly.Conchita"}
+				,{"name" : "(Polly Spanish Castilan M)", "value" : "Polly.Enrique"}
+				,{"name" : "(Polly Spanish Latin Am M)", "value" : "Polly.Miguel"}
+				,{"name" : "(Polly Spanish Latin Am F)", "value" : "Polly.Penelope"}
+				,{"name" : "(Polly Swedish F)", "value" : "Polly.Astrid"}
+				,{"name" : "(Polly Turkish M)", "value" : "Polly.Filiz"}
+				,{"name" : "(Polly Welsh F)", "value" : "Polly.Gwyneth"}
+            ]
+		},
+		{
+			"key": "ivr_language",
+			"name": "<b>IVR Language</b>",
+			"required": true,
+			"type": "dropdown",
+            "choices":[
+                {
+                  "name" : "(Man/Woman) English",
+                  "value" : "en"
+                },
+                {
+                  "name" : "(Man/Woman) English - UK",
+                  "value" : "en-gb"
+                },
+                {
+                  "name" : "(Man/Woman) Spanish",
+                  "value" : "es"
+                },
+                {
+                  "name" : "(Man/Woman) French",
+                  "value" : "fr"
+				},
+                {
+                  "name" : "(Man/Woman) German",
+                  "value" : "de"
+				}
+				,{"name" : "(Alice Only) Danish, Denmark"				, "value" : "da-DK"}
+				,{"name" : "(Alice Only) German, Germany"				, "value" : "de-DE"}
+				,{"name" : "(Alice Only) English, Australia"				, "value" : "en-AU"}
+				,{"name" : "(Alice Only) English, Canada"				, "value" : "en-CA"}
+				,{"name" : "(Alice Only) English, UK"					, "value" : "en-GB"}
+				,{"name" : "(Alice Only) English, India"					, "value" : "en-IN"}
+				,{"name" : "(Alice Only) English, United States"			, "value" : "en-US"}
+				,{"name" : "(Alice Only) Catalan, Spain"					, "value" : "ca-ES"}
+				,{"name" : "(Alice Only) Spanish, Spain"					, "value" : "es-ES"}
+				,{"name" : "(Alice Only) Spanish, Mexico"				, "value" : "es-MX"}
+				,{"name" : "(Alice Only) Finnish, Finland"				, "value" : "fi-FI"}
+				,{"name" : "(Alice Only) French, Canada"					, "value" : "fr-CA"}
+				,{"name" : "(Alice Only) French, France"					, "value" : "fr-FR"}
+				,{"name" : "(Alice Only) Italian, Italy"					, "value" : "it-IT"}
+				,{"name" : "(Alice Only) Japanese, Japan"				, "value" : "ja-JP"}
+				,{"name" : "(Alice Only) Korean, Korea"					, "value" : "ko-KR"}
+				,{"name" : "(Alice Only) Norwegian, Norway"				, "value" : "nb-NO"}
+				,{"name" : "(Alice Only) Dutch, Netherlands"				, "value" : "nl-NL"}
+				,{"name" : "(Alice Only) Polish-Poland"					, "value" : "pl-PL"}
+				,{"name" : "(Alice Only) Portuguese, Brazil"				, "value" : "pt-BR"}
+				,{"name" : "(Alice Only) Portuguese, Portugal"			, "value" : "pt-PT"}
+				,{"name" : "(Alice Only) Russian, Russia"				, "value" : "ru-RU"}
+				,{"name" : "(Alice Only) Swedish, Sweden"				, "value" : "sv-SE"}
+				,{"name" : "(Alice Only) Chinese (Mandarin)"				, "value" : "zh-CN"}
+				,{"name" : "(Alice Only) Chinese (Cantonese)"			, "value" : "zh-HK"}
+				,{"name" : "(Alice Only) Chinese (Taiwanese Mandarin)" 	, "value" : "zh-TW"}
+				,{"name" : "(Polly Only) Danish" , "value" : "da-DK" }
+				,{"name" : "(Polly Only) Dutch" , "value" : "nl-NL" }
+				,{"name" : "(Polly Only) English - Australian" , "value" : "en-AU" }
+				,{"name" : "(Polly Only) English - British" , "value" : "en-GB" }
+				,{"name" : "(Polly Only) English - Indian" , "value" : "en-IN" }
+				,{"name" : "(Polly Only) English - US" , "value" : "en-US" }
+				,{"name" : "(Polly Only) English - Welsh" , "value" : "en-GB-WLS" }
+				,{"name" : "(Polly Only) French" , "value" : "fr-FR" }
+				,{"name" : "(Polly Only) French - Canadian" , "value" : "fr-CA" }
+				,{"name" : "(Polly Only) German" , "value" : "de-DE" }
+				,{"name" : "(Polly Only) Icelandic" , "value" : "is-IS" }
+				,{"name" : "(Polly Only) Italian" , "value" : "it-IT" }
+				,{"name" : "(Polly Only) Japanese" , "value" : "ja-JP" }
+				,{"name" : "(Polly Only) Norwegian" , "value" : "nb-NO" }
+				,{"name" : "(Polly Only) Portuguese - Brazilian" , "value" : "pt-BR" }
+				,{"name" : "(Polly Only) Portuguese - European" , "value" : "pt-PT" }
+				,{"name" : "(Polly Only) Romanian" , "value" : "ro-RO" }
+				,{"name" : "(Polly Only) Russian" , "value" : "ru-RU" }
+				,{"name" : "(Polly Only) Spanish - Castilian" , "value" : "es-ES" }
+				,{"name" : "(Polly Only) Spanish - Latin American" , "value" : "es-US" }
+				,{"name" : "(Polly Only) Swedish" , "value" : "sv-SE" }
+				,{"name" : "(Polly Only) Turkish" , "value" : "tr-TR" }
+				,{"name" : "(Polly Only) Welsh" , "value" : "cy-GB" }
+            ]
+		},
 		{
 			"key": "enable-project-debug-logging",
 			"name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
