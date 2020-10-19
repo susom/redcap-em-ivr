@@ -41,8 +41,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $dict               = \REDCap::getDataDictionary(PROJECT_ID, "array");
         $backwards          = array_reverse($dict);
         $script_dict        = array();
-        $script_branch      = array();
-        $causes_branching   = array();
+        $branch_effectors   = array();
         $next_step          = null;
         $last_step          = current($backwards);
 
@@ -68,57 +67,39 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     preg_match_all("/\[(?<effector>[\w_]+)(\((?<checkbox_value>\d+)\))?\] = \'(?<value>\d+)\'/",$branching_logic, $matches);
                     
                     // possibly multiple Effector fields AND / OR
-                    $effectors = array();
                     foreach($matches["effector"] as $i => $ef){
-                        array_push($causes_branching, $ef);
                         $checkbox_value = $matches["checkbox_value"][$i];
                         $value          = $matches["value"][$i];
 
-						if(!array_key_exists($ef,$effectors)){
-							$effectors[$ef] = array();
+						if(!array_key_exists($ef,$branch_effectors)){
+							$branch_effectors[$ef] = array();
                         }
-                        
-                        // MUST NOT USE CHECKBOX
-						// if(!empty($checkbox_value)){
-						// 	array_push($effectors[$ef],$checkbox_value);
-						// }else{
-						// 	array_push($effectors[$ef],$value);
-                        // }
-                        
-                        array_push($effectors[$ef],$value);
+
+                        $branch_effectors[$ef][$value] = $field_name;
                     }
                   
-					$andor  = "&&"; //Defualt && , doesnt matter
-					if(count($effectors) == 1){
-						//then it doesnt matter it will be OR
-						//its mutually exclusive values for the same input(fieldname)
-						//so the $andor value is moot
-					}else{
-						preg_match_all("/(?<ors>\sor\s)/",$branching_logic, $matches);
-						$ors 	= count($matches["ors"]);
-						preg_match_all("/(?<ands>\sand\s)/",$branching_logic, $matches);
-						$ands 	= count($matches["ands"]);
+					$andor  = "||"; //Defualt && , doesnt matter
+					// if(count($effectors) == 1){
+					// 	//then it doesnt matter it will be OR
+					// 	//its mutually exclusive values for the same input(fieldname)
+					// 	//so the $andor value is moot
+					// }else{
+					// 	preg_match_all("/(?<ors>\sor\s)/",$branching_logic, $matches);
+					// 	$ors 	= count($matches["ors"]);
+					// 	preg_match_all("/(?<ands>\sand\s)/",$branching_logic, $matches);
+					// 	$ands 	= count($matches["ands"]);
 						
-						if($ors && !$ands){
-							$andor = "||";
-							// print_rr($branching);
-							// print_rr($effectors);
-						}else if($ors && $ands){
-							//the multiple effector will take the "or" and the and is for the other
-						}//else its default 
-					}
-
-                    if(!array_key_exists($field["field_name"], $script_branch)){
-                        $script_branch[$field["field_name"]] = array();
-                    }
-                    $script_branch[$field["field_name"]][] = array(
-                        "affected" 	=> $field["field_name"]
-                       ,"effector" 	=> $effectors
-                       ,"branching" => $branching_logic
-                       ,"andor"		=> $andor //WILL BE BEST GUESS
-                    );
+					// 	if($ors && !$ands){
+					// 		$andor = "||";
+					// 		// print_rr($branching);
+					// 		// print_rr($effectors);
+					// 	}else if($ors && $ands){
+					// 		//the multiple effector will take the "or" and the and is for the other
+					// 	}//else its default 
+					// }
                 }
 
+                //PROCESS PRESET CHOICES 
                 $preset_choices = array();
                 if($field_type == "yesno" || $field_type  == "truefalse" || $field_type  == "radio" || $field_type == "dropdown"){
                     if($field_type == "yesno"){
@@ -138,8 +119,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 }
 
 
+                //SET UP INITIAL "next_step"  IF ANY KIND OF BRANCHING IS INVOLVED WONT BE RELIABLE
                 $next_step = !$has_branching ? $next_step : null;
-                $next_step = !$end_with_voicemail ? $next_step :$last_step["field_name"];
+                $next_step = !$end_with_voicemail ? $next_step : $last_step["field_name"];
 
                 $script_dict[$field_name]  = array(
                     "field_name"        => $field_name,
@@ -155,7 +137,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 $next_step = $field_name;
             }
         }
-        $this->emDebug("all the branching affected fields", $causes_branching);
 
         $forwards                       = array_reverse($script_dict);
         $descriptive_say_previous_step  = "";
@@ -181,14 +162,12 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $i++;
         }
         $script_dict = $forwards;
-        $this->emDebug("after", $script_dict);
-
         if(!is_null($storage_key)){
             $this->setTempStorage($storage_key, "script_instrument", $this->script_instrument); 
             $this->setTempStorage($storage_key, "ivr_language", $this->ivr_language);
             $this->setTempStorage($storage_key, "ivr_voice", $this->ivr_voice);
             $this->setTempStorage($storage_key, "script", $script_dict);
-            $this->setTempStorage($storage_key, "branching", $script_branch);
+            $this->setTempStorage($storage_key, "branching", $branch_effectors);
 
 
             $first_step = current($script_dict);
@@ -199,10 +178,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $this->setTempStorage($storage_key, "current_step", $first_step["field_name"]);
         }
 
-        return array("script" => $script_dict, "branching" => $script_branch);
+        return true;
     }
 
     public function getCurrentIVRstep($response, $call_vars){
+        $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"], $call_vars["next_step"]);
         $this_step      = $call_vars["current_step"];
         $current_step   = $call_vars["script"][$this_step];
 
@@ -212,6 +192,25 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $expected_digs  = $current_step["expected_digits"];
         $branching      = $current_step["branching"];
         $next_step      = $current_step["next_step"];
+        
+        if( ($branching && empty($voicemail)) || empty($next_step) ){
+            //IF BRANCHING OR if next_step is empty, ITS NOT CERTAIN THAT THE NEXT SEQUENTIAL ARRAY ELEMENT IS CORRECT, 
+            //SO START FROM THIS STEP AND ITERATE FORWARDTO THE NEXT NON has_branching STEP
+            $mark = false;
+            foreach($call_vars["script"] as $step_name => $step){
+                if($step_name == $this_step){
+                    $mark = true;
+                    continue;
+                }             
+
+                if($mark && !$step["branching"]){
+                    $next_step = $step["field_name"];
+                    break;
+                }
+            }
+            // $this->emDebug("if this step was the result of branching, sequential step flow may be broken, so need to iterate to find next clean step (no branching)", $next_step);
+        }
+        
         $speaker        = $call_vars["ivr_voice"];
         $accent         = $call_vars["ivr_language"];
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
@@ -270,7 +269,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        $this->emDebug("DID IT REALLY SAVE IVR ???", $data, $r);
+        // $this->emDebug("DID IT REALLY SAVE IVR ???", $data, $r);
         
         return false;
     }
