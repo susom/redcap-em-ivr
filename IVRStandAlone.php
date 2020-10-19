@@ -275,8 +275,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $data[$rc_var] = $rc_val;
         }
 
-        // $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        $this->emDebug("DID IT REALLY SAVE IVR ???", $data);
+        $r    = \REDCap::saveData('json', json_encode(array($data)) );
+        $this->emDebug("DID IT REALLY SAVE IVR ???", $data, $r);
         
         return false;
     }
