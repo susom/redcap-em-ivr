@@ -268,8 +268,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $data = array();
         $data["record_id"] = $this->getNextAvailableRecordId(PROJECT_ID);
 
+        $script_fieldnames = \REDCap::getFieldNames($this->script_instrument);
         foreach($call_vars as $rc_var => $rc_val){
-            if( in_array($rc_var, array("script_instrument","ivr_language","ivr_voice","script","branching","storage_key","previous_step","current_step","last_step")) ){
+            //TODO, instead of manual exclude list, lets use a inclusive get instrument FIELDs list
+            if( !in_array($rc_var, $script_fieldnames) ){
                 continue;
             }
             $data[$rc_var] = $rc_val;
