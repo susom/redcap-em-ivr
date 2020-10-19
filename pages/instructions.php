@@ -10,7 +10,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     <h2>Stand alone REDCap + IVR EM Requirements</h2>
     <p>This EM will create an Interactive Voice Response script tree from an instrument in the host REDCap project.</p>
     
-    <h5>Rules for creating the instrument will need to be followed in creating the script.</h5>
+    <h5>Basic Rules for creating the instrument will need to be followed in creating the script.</h5>
     <ul>
         <li>Use dedicated instrument in the project to be the script (and then set in EM setting)</li>
         <li>Script should flow TOP to BOTTOM</li>
@@ -25,7 +25,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     <h5>TODO</h5>
     <ul>
         <li><em>change the em config to be manual input instead of dropdown of manuall curated list of options</em></li>
-        <li><em>Get Branching Logic Working</em></li>
+        <li><em>Need to implement repeating previous step, if wrong/unexpected input is encountered</em></li>
     </ul>
 
 
