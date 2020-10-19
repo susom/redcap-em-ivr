@@ -39,27 +39,34 @@ if( !empty($call_vars["previous_step"]) ){
 
 	$module->emDebug("Handle Results From Previous Step", $prev_step);
 
-	// MONITOR THE POST FOR [Recording Sid] , [RecordingUrl] and send an email if it is present
-	if(!empty($_POST["RecordingSid"]) && !empty($_POST["RecordingUrl"]) && $prev_field["voicemail"]){
-		$recording_url 	= trim(filter_var($_POST["RecordingUrl"], FILTER_SANITIZE_STRING));
-		// $subject 		= "Voice Mail Recording";
-		// $msg 	 		= "<a href='".$recording_url."'>Click to listen to voicemail.</a>";
-		// $module->sendEmail($subject, $msg);
-		$choice 		= $recording_url;
-	}
+	$module->emDebug("call_Vars", $call_vars);
+	//TODO NEED TO REPEAT STEP IF WRONG INPUT IS PUT IN  (NOT 1 of PRESET CHOICES)
+	if( !empty($prev_field["preset_choices"]) &&  !array_key_exists($choice , $prev_field["preset_choices"]) ){
+		$module->emDebug("unexpected input, repeat step", $prev_step);
+		//need to make $prev_step => $new_current_step
+		$call_vars["current_step"] 	= $prev_step;
+		$call_vars["repeat"] 		= true;
+	}else{
+		// MONITOR THE POST FOR [Recording Sid] , [RecordingUrl] and send an email if it is present
+		if(!empty($_POST["RecordingSid"]) && !empty($_POST["RecordingUrl"]) && $prev_field["voicemail"]){
+			$recording_url 	= trim(filter_var($_POST["RecordingUrl"], FILTER_SANITIZE_STRING));
+			// $subject 		= "Voice Mail Recording";
+			// $msg 	 		= "<a href='".$recording_url."'>Click to listen to voicemail.</a>";
+			// $module->sendEmail($subject, $msg);
+			$choice 		= $recording_url;
+		}
 
-	$rc_var = $prev_step;
-	$rc_val = $choice;
-	$module->setTempStorage($temp_call_storage_key , $rc_var, $rc_val );
+		$rc_var = $prev_step;
+		$rc_val = $choice;
+		$module->setTempStorage($temp_call_storage_key , $rc_var, $rc_val );
 
-	//handle branching
-	if( array_key_exists( $prev_step ,$causes_branching) ){
-		//If PREVIOUS STEP CAUSES BRANCHING, MATCH INPUT VALUE TO FIND NEXT STEP AND OVER WRITE call_Vars["next_step"];
-		$new_current_step 			= $causes_branching[$prev_step][$choice];
-		$call_vars["current_step"] 	= $new_current_step;
-
-		//TODO NEED TO REPEAT STEP IF WRONG INPUT IS PUT IN  (NOT 1 of PRESET CHOICES)
-		$module->emDebug("Branching causing new step", $new_current_step);
+		//handle branching
+		if( array_key_exists( $prev_step ,$causes_branching) ){
+			//If PREVIOUS STEP CAUSES BRANCHING, MATCH INPUT VALUE TO FIND NEXT STEP AND OVER WRITE call_Vars["next_step"];
+			$new_current_step 	= $causes_branching[$prev_step][$choice];
+			$call_vars["current_step"] 	= $new_current_step;
+			$module->emDebug("Branching causing new step", $new_current_step);
+		}
 	}
 }
 

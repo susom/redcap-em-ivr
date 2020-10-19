@@ -183,6 +183,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
     public function getCurrentIVRstep($response, $call_vars){
         $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"], $call_vars["next_step"]);
+        
         $this_step      = $call_vars["current_step"];
         $current_step   = $call_vars["script"][$this_step];
 
@@ -193,6 +194,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $branching      = $current_step["branching"];
         $next_step      = $current_step["next_step"];
         
+        //may need to repeat
+        if(array_key_exists("repeat" , $call_vars)){
+            $say_text = "The previous input was unexpected. Please try again. " . $say_text;
+        }
+
         if( ($branching && empty($voicemail)) || empty($next_step) ){
             //IF BRANCHING OR if next_step is empty, ITS NOT CERTAIN THAT THE NEXT SEQUENTIAL ARRAY ELEMENT IS CORRECT, 
             //SO START FROM THIS STEP AND ITERATE FORWARDTO THE NEXT NON has_branching STEP
@@ -220,6 +226,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $gather_options["finishOnKey"] = "#";
             $say_text = $say_text . " Followed by the pound sign.";
         }
+
+        
 
         //PAUSE TO BREATHE
         $response->pause(['length' => 1]);

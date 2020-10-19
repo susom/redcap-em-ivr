@@ -25,7 +25,6 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     <h5>TODO</h5>
     <ul>
         <li><em>change the em config to be manual input instead of dropdown of manuall curated list of options</em></li>
-        <li><em>Need to implement repeating previous step, if wrong/unexpected input is encountered</em></li>
     </ul>
 
 
