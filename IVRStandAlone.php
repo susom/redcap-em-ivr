@@ -18,9 +18,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     public function __construct() {
 		parent::__construct();
 		// Other code to run when object is instantiated
-	    if (defined(PROJECT_ID)) {
-	        
-        }
+	    if (defined(PROJECT_ID)) { }
     }
 
     function redcap_every_page_top($project_id){
@@ -29,7 +27,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     
     /** 
      * GET DESIGNATED SCRIPT PROJECT XML
-     * @return bool survey url link
+     * @return array
      */
     public function loadScript($storage_key=null){
         //GET EM SETTINGS
@@ -124,7 +122,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //SET UP INITIAL "next_step"  IF ANY KIND OF BRANCHING IS INVOLVED WONT BE RELIABLE
                 $next_step = empty($branching_logic) ? $next_step : null;
                 $next_step = empty($voicemail_opts)  ? $next_step : $last_step["field_name"];
-$this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
+                
                 $script_dict[$field_name]  = array(
                     "field_name"        => $field_name,
                     "field_type"        => $field_type,
@@ -184,6 +182,10 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
         return true;
     }
 
+    /** 
+     * FROM CURRENT STATE, PRODUCE THE CURRENT STEP OF THE SCRIPT
+     * @return array
+     */
     public function getCurrentIVRstep($response, $call_vars){
         $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"], $call_vars["next_step"]);
 
@@ -311,12 +313,13 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
     }
 
     /**
-     * Verifies the invitation access code and marks it as used, and creates a record in the main project with all the answers supplied via voice 
-     * @return bool survey url link
+     * STORES ALL THE RELEVANT DATA FROM call_vars WITH MATCHING keys = valid field_names back to Redcap
+     * @return null
      */
     public function IVRHandler($call_vars) {
         $data = array();
 
+        // SET A record_id IF NOT AVAILABLE
         if(!isset($call_vars["record_id"])){
             $storage_key    = $call_vars["storage_key"];
             $next_id        = $this->getNextAvailableRecordId(PROJECT_ID);
@@ -333,16 +336,14 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
         }
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        $this->emDebug("Did it save this step?", $data, $r , $call_vars);
-        
-        return false;
+        // $this->emDebug("Did it save this step?", $data, $r , $call_vars);
+        return;
     }
-
 
 
     /**
      * Set Temp Store Proj Settings
-     * @param $key $val pare
+     * @param $key 
      */
     public function setTempStorage($storekey, $k, $v) {
         if(!is_null($storekey)){
@@ -355,7 +356,7 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
 
     /**
      * Get Temp Store Proj Settings
-     * @param $key $val pare
+     * @param $key 
      */
     public function getTempStorage($storekey) {
         if(!is_null($storekey)){
@@ -369,7 +370,7 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
 
     /**
      * rEMOVE Temp Store Proj Settings
-     * @param $key $val pare
+     * @param $key 
      */
     public function removeTempStorage($storekey) {
         $this->removeProjectSetting($storekey);
@@ -397,35 +398,32 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
         return $next_id;
     }
 
+
+
+
+
+
+
+
+
     /*
         Pull static files from within EM dir Structure
     */
-    function getAssetUrl($audiofile = "v_languageselect.mp3", $hard_domain = ""){
+    function getAssetUrl($audiofile = "default.mp3", $hard_domain = ""){
         $audio_file = $this->framework->getUrl("getAsset.php?file=".$audiofile."&ts=". $this->getLastModified() , true, true);
         
         if(!empty($hard_domain)){
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
 
-        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
+        // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
         return $audio_file;
     }
     
-    /**
-     * Return an error
-     * @param $msg
-     */
-    public function returnError($msg) {
-        $this->emDebug($msg);
-        header("Content-type: application/json");
-        echo json_encode(array("error" => $msg));
-        exit();
-    }
-
     /*
         USE mail func
     */
-    public function sendEmail($subject, $msg, $from="Twilio VM", $to="ca-factstudy@stanford.edu"){
+    public function sendEmail($subject, $msg, $from="Twilio VM", $to="this_project_admin@stanford.edu"){
         //boundary
         $semi_rand = md5(time());
         $mime_boundary = "==Multipart_Boundary_x{$semi_rand}x";
@@ -445,67 +443,6 @@ $this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
         }
         $this->emDebug("Email sent");
         return true;
-    }
-
-    
-    /* 
-        Parse CSV to batchupload test Results
-    */
-    public function parseCSVtoDB($file){
-
-        $header_row = true;
-        $file       = fopen($file['tmp_name'], 'r');
-
-        $headers    = array();
-        $results    = Array();
-
-        //now we parse the CSV, and match the QR -> UPC 
-        if($file){
-            while (($line = fgetcsv($file)) !== FALSE) {
-                if($header_row){
-                    // adding extra column to determine which file the data came from
-                    $headers 	= $line;
-                    $header_row = false;
-                }else{
-                    // adding extra column to determine which csv file the data came from
-                    array_push($results, $line);
-                }
-            }
-            fclose($file);
-        }
-        
-        $header_count   = count($headers);
-        $data           = array();
-        foreach($results as $rowidx => $result){
-            $qrscan     = $result[0];
-            $upcscan    = $result[1];
-            // $api_result = $this->getKitSubmissionId($qrscan);
-            // $this->emDebug("now what", $api_result);
-            // if(isset($api_result["participant_id"])){
-            //     $record_id      = $api_result["record_id"];
-            //     $records        = $api_result["all_matches"];
-            //     $mainid         = $api_result["main_id"];
-
-            //     foreach($records as $result){
-            //         // SAVE TO REDCAP
-            //         $temp   = array(
-            //             "record_id"         => $result["record_id"],
-            //             "kit_upc_code"      => $upcscan,
-            //             "kit_qr_input"      => $qrscan,
-            //             "household_record_id" => $mainid
-            //         );
-            //         $data[] = $temp;
-            //         $r  = \REDCap::saveData('json', json_encode(array($temp)) );
-            //         if(!empty($r["errors"])){
-            //             $this->emDebug("save to kit_submit, the UPC and main record_id", $rowidx, $r["errors"]);
-            //         }
-            //     }
-            // }else{
-            //     $this->emDebug("No API results for qrscan for row $rowidx");
-            // }
-        }        
-                
-        return $r;
     }
 }
 ?>

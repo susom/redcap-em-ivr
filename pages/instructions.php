@@ -45,6 +45,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
         <li><em>change the em config to be manual input instead of dropdown of manuall curated list of options</em></li>
         <li><em>honor ANY branching</em></li>
         <li>{{READLETTERS=abc}} : will read the text as "AYY BEE SEE"</li>
+        <li>See if there is a "hangup" EVENT to more reliably remove the temporary "session" data, NO Postback on hangup... hmm</li>
     </ul>
 
 
