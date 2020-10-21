@@ -13,10 +13,11 @@ use Twilio\TwiML\VoiceResponse;
 4. call_vars will hold data throughout the call , key = Callsid
 */
 
+
 // POST FROM TWILIO
 $temp_call_storage_key 	= trim(filter_var($_POST["CallSid"], FILTER_SANITIZE_STRING));
 $choice 				= isset($_POST["Digits"])  ? trim(filter_var($_POST["Digits"], FILTER_SANITIZE_NUMBER_INT)) : null;
-$module->emDebug("POST FROM TWILIO", $_POST);
+// $module->emDebug("POST FROM TWILIO", $_POST);
 
 // CALL SESSION STORAGE - PERSISTS THROUGH OUT CALL (starts empty);
 $call_vars 				= $module->getTempStorage($temp_call_storage_key);
@@ -34,8 +35,7 @@ if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] ==
 if( !empty($call_vars["previous_step"]) ){
 	// CHOICE is the input answering the Previous Step Prompt
 	$prev_step 			= $call_vars["previous_step"];
-	$prev_field 		= $call_vars["script"][$prev_step];  
-	$causes_branching 	= $call_vars["branching"];
+	$prev_field 		= $call_vars["ivr_dictionary_script"][$prev_step];  
 
 	$module->emDebug("Handle Results From Previous Step", $prev_step, $choice);
 
@@ -63,15 +63,6 @@ if( !empty($call_vars["previous_step"]) ){
 		//SAVE WHAT WE HAVE SO FAR
 		$call_vars[$rc_var] = $rc_val;
 		$module->IVRHandler($call_vars);
-
-		// handle branching
-		// TODO lets try using $valid = \REDCap::evaluateLogic($logic, $pid, $record_id);
-		if( array_key_exists( $prev_step ,$causes_branching ) ){
-			//If PREVIOUS STEP CAUSES BRANCHING, MATCH INPUT VALUE TO FIND NEXT STEP AND OVER WRITE call_Vars["next_step"];
-			$new_current_step 	= $causes_branching[$prev_step][$choice];
-			$call_vars["current_step"] 	= $new_current_step;
-			$module->emDebug("Branching causing new step", $new_current_step);
-		}
 	}
 }
 

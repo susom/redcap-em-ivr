@@ -37,70 +37,28 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         //GET THE DICTIONARY WITH SCRIPT
         $dict               = \REDCap::getDataDictionary(PROJECT_ID, "array");
-        $basic_script       = array();
-        $backwards          = array_reverse($dict);
-        $script_dict        = array();
-        $branch_effectors   = array();
+        
+        //MANIPULATE THE SCRIPT 
         $next_step          = null;
+        $new_script         = array();
+
+        $backwards          = array_reverse($dict);
         $last_step          = current($backwards);
 
-        foreach($backwards as $field){
-            // Its backwards so for the most part the "previous" step can be set as "next" (except when branching)
+        foreach($dict as $field_name => $field){
             // the important stuff
             $form_name          = $field["form_name"];
-            $field_name         = $field["field_name"];
             $field_type         = $field["field_type"];
             $field_label        = $field["field_label"];
             $choices            = $field["select_choices_or_calculations"];
+            $branching_logic    = $field["branching_logic"];
 
             $field_note         = json_decode($field["field_note"],1); //MUST BE JSON
             $expected_digits    = array_key_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
             $voicemail_opts     = array_key_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
 
-            $branching_logic    = $field["branching_logic"];
-            $annotation         = $field["field_annotation"];
-
             // GET FIELDS FROM INSTRUMENT CONTAINING IVR SCRIPT
             if( $form_name == $this->script_instrument ){
-                $has_branching = false;
-                if(!empty($branching_logic)){
-                    $has_branching = true;
-                    
-                    preg_match_all("/\[(?<effector>[\w_]+)(\((?<checkbox_value>\d+)\))?\] = \'(?<value>\d+)\'/",$branching_logic, $matches);
-                    
-                    // possibly multiple Effector fields AND / OR
-                    foreach($matches["effector"] as $i => $ef){
-                        $checkbox_value = $matches["checkbox_value"][$i];
-                        $value          = $matches["value"][$i];
-
-						if(!array_key_exists($ef,$branch_effectors)){
-							$branch_effectors[$ef] = array();
-                        }
-
-                        $branch_effectors[$ef][$value] = $field_name;
-                    }
-                  
-					$andor  = "||"; //Defualt && , doesnt matter
-					// if(count($effectors) == 1){
-					// 	//then it doesnt matter it will be OR
-					// 	//its mutually exclusive values for the same input(fieldname)
-					// 	//so the $andor value is moot
-					// }else{
-					// 	preg_match_all("/(?<ors>\sor\s)/",$branching_logic, $matches);
-					// 	$ors 	= count($matches["ors"]);
-					// 	preg_match_all("/(?<ands>\sand\s)/",$branching_logic, $matches);
-					// 	$ands 	= count($matches["ands"]);
-						
-					// 	if($ors && !$ands){
-					// 		$andor = "||";
-					// 		// print_rr($branching);
-					// 		// print_rr($effectors);
-					// 	}else if($ors && $ands){
-					// 		//the multiple effector will take the "or" and the and is for the other
-					// 	}//else its default 
-					// }
-                }
-
                 //PROCESS PRESET CHOICES 
                 $preset_choices = array();
                 if($field_type == "yesno" || $field_type  == "truefalse" || $field_type  == "radio" || $field_type == "dropdown"){
@@ -120,148 +78,196 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 }
 
                 //SET UP INITIAL "next_step"  IF ANY KIND OF BRANCHING IS INVOLVED WONT BE RELIABLE
-                $next_step = empty($branching_logic) ? $next_step : null;
-                $next_step = empty($voicemail_opts)  ? $next_step : $last_step["field_name"];
-                
-                $script_dict[$field_name]  = array(
+                $new_script[$field_name]  = array(
                     "field_name"        => $field_name,
                     "field_type"        => $field_type,
                     "say_text"          => $field_label,
                     "preset_choices"    => $preset_choices,
                     "voicemail"         => $voicemail_opts,
                     "expected_digits"   => $expected_digits,
-                    "branching"         => $branching_logic,
-                    "next_step"         => $next_step
+                    "branching_logic"   => $branching_logic,
                 );
-
-                $next_step = $field_name;
             }
         }
 
-        $forwards                       = array_reverse($script_dict);
-        $descriptive_say_previous_step  = "";
-        $i                              = 1;
-        $last_i                         = count($script_dict);
-        foreach($forwards  as $field_name => $step){
-            $field_type = $step["field_type"];
-
-            // Combine Previous text if it is only a Descriptive
-            $say_text                               = $descriptive_say_previous_step . $step["say_text"];
-            $forwards[$field_name]["say_text"]   = $say_text;
-
-            if($field_type == "descriptive" && $i !== $last_i){
-                //IF THIS IS NOT THE LAST STEP IN THE SCRIPT, COMBINE IT WITH THE NEXT STEP , SO THE IVR WILL SAY BOTH 
-                //BECAUSE EVERY STEP OF IVR SHOULD REQUIRE SOME INPUT
-                $descriptive_say_previous_step = $say_text ." ";
-                unset($forwards[$field_name]);
-                $i++;
-                continue;
-            }
-
-            $descriptive_say_previous_step  = "";
-            $i++;
-        }
-        $script_dict = $forwards;
+        //SET UP THE INITIAL call_vars SESSION VARIABLES to run the script
         if(!is_null($storage_key)){
-            $this->setTempStorage($storage_key, "script_instrument", $this->script_instrument); 
             $this->setTempStorage($storage_key, "ivr_language", $this->ivr_language);
             $this->setTempStorage($storage_key, "ivr_voice", $this->ivr_voice);
-            $this->setTempStorage($storage_key, "script", $script_dict);
-            $this->setTempStorage($storage_key, "raw_script", $dict);
-            $this->setTempStorage($storage_key, "branching", $branch_effectors);
+            $this->setTempStorage($storage_key, "script_instrument", $this->script_instrument); 
+            $this->setTempStorage($storage_key, "ivr_dictionary_script", $new_script);
 
-
-            $first_step = current($script_dict);
             $this->setTempStorage($storage_key, "storage_key", $storage_key);
             $this->setTempStorage($storage_key, "last_step", $last_step["field_name"]);
-
             $this->setTempStorage($storage_key, "previous_step", null);
+           
+            $first_step = current($new_script);
             $this->setTempStorage($storage_key, "current_step", $first_step["field_name"]);
         }
 
         return true;
     }
 
+    public function recurseCurrentSteps($current_step, $call_vars, $container){
+        $this_step          = $current_step["field_name"];
+        $field_type         = $current_step["field_type"];
+        $branching_logic    = $current_step["branching_logic"];
+        $record_id          = isset($call_vars["record_id"]) ? $call_vars["record_id"] : null;
+
+        // WE ONLY RECURSE IF ITS A NON INPUT /DEscriptive Field
+        if($field_type == "descriptive"){
+            if( !empty($branching_logic) ){
+                //has branching
+                if($record_id){
+                    //has record_id
+                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
+                    if($valid){
+                        array_push($container, $current_step);
+                    }
+                }
+            }else{
+                array_push($container, $current_step);
+            }
+
+            $next = false;
+            foreach($call_vars["ivr_dictionary_script"] as $field_name => $next_step){
+                //keep iterating until we reach this step
+                if($field_name == $this_step){
+                    //mark it and continue to next step to evaluate
+                    $next = true;
+                    continue; //to next element
+                }
+
+                if($next){
+                    $container = $this->recurseCurrentSteps($next_step, $call_vars, $container);
+                    break;
+                }
+            }
+        }else{
+            if( !empty($branching_logic) ){
+                //has branching
+                if($record_id){
+                    //has record_id
+                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
+                    if($valid){
+                        array_push($container, $current_step);
+                    }else{
+                        foreach($call_vars["ivr_dictionary_script"] as $field_name => $next_step){
+                            //keep iterating until we reach this step
+                            if($field_name == $this_step){
+                                //mark it and continue to next step to evaluate
+                                $next = true;
+                                continue; //to next element
+                            }
+            
+                            if($next){
+                                $container = $this->recurseCurrentSteps($next_step, $call_vars, $container);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }else{
+                // this step is descriptive add and move on
+                array_push($container, $current_step);
+            }
+        }
+
+        return $container;
+    }
+    
     /** 
      * FROM CURRENT STATE, PRODUCE THE CURRENT STEP OF THE SCRIPT
      * @return array
      */
     public function getCurrentIVRstep($response, $call_vars){
-        $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"], $call_vars["next_step"]);
+        $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"]);
 
-        $this_step      = $call_vars["current_step"];
-        $current_step   = $call_vars["script"][$this_step];
-        $say_text       = $current_step["say_text"];
+        // THIS IS THE CURRENT STEP, BUT THERE MAY BE OTHER STEPS TO FLOW DOWN TO IF THIS IS ONLY A DESCRIPTIVE TEXT
+        $this_step          = $call_vars["current_step"];
+        $current_step       = $call_vars["ivr_dictionary_script"][$this_step];
+        
+        // GATHER UP STEPs UNTIL REACHING An input step (evaluate branching if need be)
+        $total_fields_in_step = $this->recurseCurrentSteps($current_step, $call_vars, array());
+        $this->emDebug("total fields in step", $total_fields_in_step);
 
-        // SPLIT UP "say" text into discreet say blocks by line break 
-        // parse any special {{instructions}} 
-        // say each line with a .5 second pause in between
-        $say_arr        = array();
-        $temp_say       = explode(PHP_EOL, $say_text );
-        foreach($temp_say as $say_line){
-            if(!empty(trim($say_line))){
-                preg_match_all("/{{([\d\w\s]+)(?:(?:=?)([^}]+))?}}/" ,$say_line, $match_arr);
-                if(!empty($match_arr[0])){
-                    $action = $match_arr[1][0];
-                    $value  = $match_arr[2][0];
-                    
-                    if($action == "PAUSE"){
-                        $say_arr[] = array("pause" => $value);
-                    }else if($action == "CALLFORWARD"){
-                        $say_arr[] = array("dial" => $value);
+        $say_arr = array();
+        foreach($total_fields_in_step as $step){
+            $current_step_name      = $step["field_name"];
+            $current_step_type      = $step["field_type"];
+            $current_step_say       = $step["say_text"];
+            $current_step_choices   = $step["preset_choices"];
+            $current_step_vm        = $step["voicemail"];
+            $current_step_expected  = $step["expected_digits"];
+
+            // SPLIT UP "say" text into discreet say blocks by line break 
+            // parse any special {{instructions}} 
+            // say each line with a .5 second pause in between
+            $temp_say       = explode(PHP_EOL, $current_step_say );
+            foreach($temp_say as $say_line){
+                if(!empty(trim($say_line))){
+                    preg_match_all("/{{([\d\w\s]+)(?:(?:=?)([^}]+))?}}/" ,$say_line, $match_arr);
+                    if(!empty($match_arr[0])){
+                        $action = $match_arr[1][0];
+                        $value  = $match_arr[2][0];
+                        
+                        if($action == "PAUSE"){
+                            $say_arr[] = array("pause" => $value);
+                        }else if($action == "CALLFORWARD"){
+                            $say_arr[] = array("dial" => $value);
+                        }else{
+                            continue;
+                        }
                     }else{
-                        continue;
+                        $say_arr[] = array("say" => $say_line);
                     }
-                }else{
-                    $say_arr[] = array("say" => $say_line);
                 }
             }
+
+            //WILL ALWAYS END UP ON AN INPUT, WILL ONLY BE MULTIPLE IF SOME ARE descriptive fields
+            //SO WE CAN COME OUT OF THE LOOP ON THE correct current_step
         }
 
-        $presets        = $current_step["preset_choices"];
-        $voicemail      = $current_step["voicemail"];
-        $expected_digs  = $current_step["expected_digits"];
-        $branching      = $current_step["branching"];
-        $next_step      = $current_step["next_step"];
+        $this->emDebug("all of the says in the combined steps", $say_arr);
+
+        $presets        = $current_step_choices;
+        $voicemail      = $current_step_vm;
+        $expected_digs  = $current_step_expected;
+        
         
         //may need to repeat
         if(array_key_exists("repeat" , $call_vars)){
-            // $say_text = "The previous input was unexpected. Please try again. " . $say_text;
             array_unshift($say_arr, array("say" => "The previous input was unexpected. Please try again.") );
         }
 
-        if( ($branching && empty($voicemail)) || empty($next_step) ){
-            //IF BRANCHING OR if next_step is empty, ITS NOT CERTAIN THAT THE NEXT SEQUENTIAL ARRAY ELEMENT IS CORRECT, 
-            //SO START FROM THIS STEP AND ITERATE FORWARDTO THE NEXT NON has_branching STEP
-            $mark = false;
-            foreach($call_vars["script"] as $step_name => $step){
-                if($step_name == $this_step){
-                    $mark = true;
-                    continue;
-                }             
 
-                if($mark && !$step["branching"]){
-                    $next_step = $step["field_name"];
-                    break;
-                }
+        //NEED TO FIND THE NEXT STEP IN THE FLOW , JUST PICK THE NEXT ONE DOWN , FIGURE IT OUT LATER
+        $next_step  = null;
+        $next       = false;
+        foreach($call_vars["ivr_dictionary_script"] as $step_name => $step){
+            if($step_name == $current_step_name){
+                $next = true;
+                continue;
+            }             
+
+            if($next){
+                $next_step = $step["field_name"];
+                break;
             }
-            // $this->emDebug("if this step was the result of branching, sequential step flow may be broken, so need to iterate to find next clean step (no branching)", $next_step);
         }
-        
+       
+
         $speaker        = $call_vars["ivr_voice"];
         $accent         = $call_vars["ivr_language"];
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
-        
         $gather_options = array('numDigits' => $expected_digs);
         
         if($expected_digs > 1){
             $gather_options["finishOnKey"] = "#";
-            // $say_text = $say_text . " Followed by the pound sign.";
             array_push($say_arr, array("say" => "Followed by the pound sign.") );
         }
         if(!empty($voicemail)){
             $gather_options["finishOnKey"] = "#";
-            // $say_text = $say_text . " When you are finished recording press the pound sign.";
             array_push($say_arr, array("say" => "When you are finished recording press the pound sign.") );
         }
 
@@ -272,8 +278,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $gather = $response->gather($gather_options); 
 
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
-        // $this->emDebug("say array", $say_arr);
-
         foreach($say_arr as $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $gather->pause(["length" => $method_value["pause"] ]);  
@@ -298,17 +302,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }else if(!empty($voicemail)){
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribe' => 'true', "finishOnKey" => "#"]);
-        }else{
-            // $gather = $response->gather($gather_options); 
-            // $gather->say($say_text, $voicelang_opts);   
-
-            // Use <play> to play mp3
-	        // $gather->play($module->getAssetUrl("v_languageselect.mp3"));
         }
         
         //3 RESET CALL VARS FOR NEXT IVR STEP
         $storage_key = $call_vars["storage_key"];
-        $this->setTempStorage($storage_key, "previous_step", $this_step);
+        $this->setTempStorage($storage_key, "previous_step", $current_step_name);
+
+        //TODO , FIND THE NEXT STEP
         $this->setTempStorage($storage_key, "current_step", $next_step);
     }
 
