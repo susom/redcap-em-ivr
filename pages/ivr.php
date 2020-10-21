@@ -31,6 +31,7 @@ if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] ==
 }
 
 //IF IT CAME FROM PREVIOUS STEP, THEN PROCESS THE CHOICES, SAVE TO SESSION
+//EVERY "step" NEEDS TO FINISH WITH AN INPUT
 if( !empty($call_vars["previous_step"]) ){
 	// CHOICE is the input answering the Previous Step Prompt
 	$prev_step 			= $call_vars["previous_step"];
@@ -59,6 +60,10 @@ if( !empty($call_vars["previous_step"]) ){
 		$rc_var = $prev_step;
 		$rc_val = $choice;
 		$module->setTempStorage($temp_call_storage_key , $rc_var, $rc_val );
+		
+		//SAVE WHAT WE HAVE SO FAR
+		$call_vars[$rc_var] = $rc_val;
+		$module->IVRHandler($call_vars);
 
 		//handle branching
 		if( array_key_exists( $prev_step ,$causes_branching) ){

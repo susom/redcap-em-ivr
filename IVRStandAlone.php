@@ -39,6 +39,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         //GET THE DICTIONARY WITH SCRIPT
         $dict               = \REDCap::getDataDictionary(PROJECT_ID, "array");
+        $basic_script       = array();
         $backwards          = array_reverse($dict);
         $script_dict        = array();
         $branch_effectors   = array();
@@ -53,10 +54,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $field_type         = $field["field_type"];
             $field_label        = $field["field_label"];
             $choices            = $field["select_choices_or_calculations"];
-            $field_note         = $field["field_note"];
+
+            $field_note         = json_decode($field["field_note"],1); //MUST BE JSON
+            $expected_digits    = array_key_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
+            $voicemail_opts     = array_key_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
+
             $branching_logic    = $field["branching_logic"];
             $annotation         = $field["field_annotation"];
-            $end_with_voicemail = trim($annotation) == "@VOICEMAIL" ? true : false;
 
             // GET FIELDS FROM INSTRUMENT CONTAINING IVR SCRIPT
             if( $form_name == $this->script_instrument ){
@@ -115,22 +119,20 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                         $num_val = explode(",",$pair);
                         $preset_choices[trim($num_val[0])] = trim($num_val[1]);
                     } 
-
                 }
 
-
                 //SET UP INITIAL "next_step"  IF ANY KIND OF BRANCHING IS INVOLVED WONT BE RELIABLE
-                $next_step = !$has_branching ? $next_step : null;
-                $next_step = !$end_with_voicemail ? $next_step : $last_step["field_name"];
-
+                $next_step = empty($branching_logic) ? $next_step : null;
+                $next_step = empty($voicemail_opts)  ? $next_step : $last_step["field_name"];
+$this->emDebug("nexgt step?", !empty($voicemail_opts), $next_step, $field_name);
                 $script_dict[$field_name]  = array(
                     "field_name"        => $field_name,
                     "field_type"        => $field_type,
                     "say_text"          => $field_label,
                     "preset_choices"    => $preset_choices,
-                    "voicemail"         => $end_with_voicemail,
-                    "expected_digits"   => $field_note,
-                    "branching"         => $has_branching,
+                    "voicemail"         => $voicemail_opts,
+                    "expected_digits"   => $expected_digits,
+                    "branching"         => $branching_logic,
                     "next_step"         => $next_step
                 );
 
@@ -167,6 +169,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $this->setTempStorage($storage_key, "ivr_language", $this->ivr_language);
             $this->setTempStorage($storage_key, "ivr_voice", $this->ivr_voice);
             $this->setTempStorage($storage_key, "script", $script_dict);
+            $this->setTempStorage($storage_key, "raw_script", $dict);
             $this->setTempStorage($storage_key, "branching", $branch_effectors);
 
 
@@ -183,11 +186,36 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
     public function getCurrentIVRstep($response, $call_vars){
         $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"], $call_vars["next_step"]);
-        
+
         $this_step      = $call_vars["current_step"];
         $current_step   = $call_vars["script"][$this_step];
-
         $say_text       = $current_step["say_text"];
+
+        // SPLIT UP "say" text into discreet say blocks by line break 
+        // parse any special {{instructions}} 
+        // say each line with a .5 second pause in between
+        $say_arr        = array();
+        $temp_say       = explode(PHP_EOL, $say_text );
+        foreach($temp_say as $say_line){
+            if(!empty(trim($say_line))){
+                preg_match_all("/{{([\d\w\s]+)(?:(?:=?)([^}]+))?}}/" ,$say_line, $match_arr);
+                if(!empty($match_arr[0])){
+                    $action = $match_arr[1][0];
+                    $value  = $match_arr[2][0];
+                    
+                    if($action == "PAUSE"){
+                        $say_arr[] = array("pause" => $value);
+                    }else if($action == "CALLFORWARD"){
+                        $say_arr[] = array("dial" => $value);
+                    }else{
+                        continue;
+                    }
+                }else{
+                    $say_arr[] = array("say" => $say_line);
+                }
+            }
+        }
+
         $presets        = $current_step["preset_choices"];
         $voicemail      = $current_step["voicemail"];
         $expected_digs  = $current_step["expected_digits"];
@@ -196,7 +224,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         
         //may need to repeat
         if(array_key_exists("repeat" , $call_vars)){
-            $say_text = "The previous input was unexpected. Please try again. " . $say_text;
+            // $say_text = "The previous input was unexpected. Please try again. " . $say_text;
+            array_unshift($say_arr, array("say" => "The previous input was unexpected. Please try again.") );
         }
 
         if( ($branching && empty($voicemail)) || empty($next_step) ){
@@ -222,37 +251,58 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
         
         $gather_options = array('numDigits' => $expected_digs);
-        if($expected_digs > 1 || $voicemail){
-            $gather_options["finishOnKey"] = "#";
-            $say_text = $say_text . " Followed by the pound sign.";
-        }
-
         
+        if($expected_digs > 1){
+            $gather_options["finishOnKey"] = "#";
+            // $say_text = $say_text . " Followed by the pound sign.";
+            array_push($say_arr, array("say" => "Followed by the pound sign.") );
+        }
+        if(!empty($voicemail)){
+            $gather_options["finishOnKey"] = "#";
+            // $say_text = $say_text . " When you are finished recording press the pound sign.";
+            array_push($say_arr, array("say" => "When you are finished recording press the pound sign.") );
+        }
 
         //PAUSE TO BREATHE
         $response->pause(['length' => 1]);
 
+        //SET UP GATHER , EVERY STEP MUST END IN gather
+        $gather = $response->gather($gather_options); 
+
+        // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
+        // $this->emDebug("say array", $say_arr);
+
+        foreach($say_arr as $method_value){
+            if(array_key_exists("pause", $method_value) ){
+                $gather->pause(["length" => $method_value["pause"] ]);  
+            }else if(array_key_exists("dial", $method_value) ){
+                $response->dial($method_value["dial"]);  
+                //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
+                return;
+            }else{
+                $gather->say($method_value["say"], $voicelang_opts);  
+                //THERE IS A NATURAL SMALL PAUSE BETWEEN DIFFERNT SAY BLOCKS
+            }
+        }
+
         //1 SET UP DIGITS REQUEST (EVERY STEP OF IVR MUST ASK FOR INPUT TO MOVE ON)
         //2 SAY OR PROMPT
         if(!empty($presets)){
-            $response->say($say_text, $voicelang_opts);  
-
             $gather = $response->gather($gather_options); 
             foreach($presets as $digit =>  $value){
                 $prompt = "For $value press $digit";
                 $gather->say($prompt, $voicelang_opts );
+                $gather->pause(['length' => .5]);
             }
-        }else if($voicemail){
-            $response->say($say_text, $voicelang_opts); 
-            $response->record(['timeout' => 10, 'maxLength' => 15, 'transcribe' => 'true', "finishOnKey" => "#"]);
+        }else if(!empty($voicemail)){
+            $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribe' => 'true', "finishOnKey" => "#"]);
         }else{
-            $gather = $response->gather($gather_options); 
-            $gather->say($say_text, $voicelang_opts);   
+            // $gather = $response->gather($gather_options); 
+            // $gather->say($say_text, $voicelang_opts);   
 
             // Use <play> to play mp3
 	        // $gather->play($module->getAssetUrl("v_languageselect.mp3"));
         }
-
         
         //3 RESET CALL VARS FOR NEXT IVR STEP
         $storage_key = $call_vars["storage_key"];
@@ -266,7 +316,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
      */
     public function IVRHandler($call_vars) {
         $data = array();
-        $data["record_id"] = $this->getNextAvailableRecordId(PROJECT_ID);
+
+        if(!isset($call_vars["record_id"])){
+            $storage_key    = $call_vars["storage_key"];
+            $next_id        = $this->getNextAvailableRecordId(PROJECT_ID);
+            $call_vars["record_id"] = $next_id;
+            $this->setTempStorage($storage_key, "record_id", $next_id);
+        }
 
         $script_fieldnames = \REDCap::getFieldNames($this->script_instrument);
         foreach($call_vars as $rc_var => $rc_val){
@@ -277,7 +333,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        // $this->emDebug("DID IT REALLY SAVE IVR ???", $data, $r);
+        $this->emDebug("Did it save this step?", $data, $r , $call_vars);
         
         return false;
     }
