@@ -241,7 +241,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
 
-        //NEED TO FIND THE NEXT STEP IN THE FLOW , JUST PICK THE NEXT ONE DOWN , FIGURE IT OUT LATER
+        //NEED TO FIND THE NEXT STEP IN THE FLOW , JUST PICK THE NEXT ONE DOWN , Recursive function will figure it out later
         $next_step  = null;
         $next       = false;
         foreach($call_vars["ivr_dictionary_script"] as $step_name => $step){
@@ -256,7 +256,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }
        
-
         $speaker        = $call_vars["ivr_voice"];
         $accent         = $call_vars["ivr_language"];
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
@@ -275,7 +274,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $response->pause(['length' => 1]);
 
         //SET UP GATHER , EVERY STEP MUST END IN gather
-        $gather = $response->gather($gather_options); 
+        if(empty($current_step_vm)){
+            // gotta be careful using gather method, it really seems to add a long pause when jumping back to response object context
+            $gather = $response->gather($gather_options); 
+        }
 
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
         foreach($say_arr as $method_value){
@@ -286,7 +288,12 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
                 return;
             }else{
-                $gather->say($method_value["say"], $voicelang_opts);  
+                if(!empty($current_step_vm)){
+                    $this->emDebug("wait why voicemail propt take so long?");
+                    $response->say($method_value["say"], $voicelang_opts); 
+                }else{
+                    $gather->say($method_value["say"], $voicelang_opts); 
+                }
                 //THERE IS A NATURAL SMALL PAUSE BETWEEN DIFFERNT SAY BLOCKS
             }
         }
@@ -294,11 +301,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         //1 SET UP DIGITS REQUEST (EVERY STEP OF IVR MUST ASK FOR INPUT TO MOVE ON)
         //2 SAY OR PROMPT
         if(!empty($presets)){
-            $gather = $response->gather($gather_options); 
             foreach($presets as $digit =>  $value){
                 $prompt = "For $value press $digit";
                 $gather->say($prompt, $voicelang_opts );
-                $gather->pause(['length' => .5]);
+                $gather->pause(['length' => .25]);
             }
         }else if(!empty($voicemail)){
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribe' => 'true', "finishOnKey" => "#"]);

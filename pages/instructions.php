@@ -22,7 +22,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
         <li>[field_note] MUST be used to describe number of [expected_digits] as well as set [voicemail] settings in JSON FORMAT!</li>
         <li>{{Special Instructions Syntax}} instructions can be used within speaking text and will be parsed/removed and acted on</li>
         <li>ONLY [descriptive], [text], [radio/truefalse/yesno], [dropdown] fields may be used... NO [checkbox]</li>
-        <li>Script will honor BASIC branching (on single condition) for now</li>
+        <li>Script will honor any valid redcap branching  logic</li>
         <li>when [expected_digits] > 1 the text "Followed by the 'pound' sign." will be automatically inserted after the [field_label] prompt text, so plan accordingly</li>
         <li>when using [radio/truefalse/yesno/dropdown] fields with preset number/value options.  The caller will be prompted in the following manner "For [value] press [number]" in a loop with .5 second pause in between.  eg. "For Cats press 1 ,  For Dogs press 2"</li>
     </ul>
@@ -43,7 +43,6 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     <h5>TODO</h5>
     <ul>
         <li><em>change the em config to be manual input instead of dropdown of manuall curated list of options</em></li>
-        <li><em>honor ANY branching</em></li>
         <li>{{READLETTERS=abc}} : will read the text as "AYY BEE SEE"</li>
         <li>See if there is a "hangup" EVENT to more reliably remove the temporary "session" data, NO Postback on hangup... hmm</li>
     </ul>
