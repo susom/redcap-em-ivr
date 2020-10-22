@@ -201,6 +201,12 @@
             ]
 		},
 		{
+			"key": "vm_email",
+			"name": "<b>Email to forward Voice Recording Transcripts to:</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
 			"key": "enable-project-debug-logging",
 			"name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
 			"required": false,

@@ -294,7 +294,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 return;
             }else{
                 if(!empty($current_step_vm)){
-                    $this->emDebug("wait why voicemail propt take so long?");
                     $response->say($method_value["say"], $voicelang_opts); 
                 }else{
                     $gather->say($method_value["say"], $voicelang_opts); 
@@ -313,6 +312,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }else if(!empty($voicemail)){
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
+            // $txn_webhook = "http://localhost/api/?type=module&prefix=ivr&page=pages%2Ftxn_webhook&pid=44&NOAUTH";
+
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
         
@@ -354,6 +355,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     public function vmTranscriptionPostbackHandler($recording_url, $txn_text){
         $this->emDebug("find this txn url and save txn text", $recording_url, $txn_text);
 
+        // $recording_url = "https://api.twilio.com/2010-04-01/Accounts/ACacac91f9bd6f40e13e4a4a838c8dffce/Recordings/RE70de02ef2fe947beea04be1ebd09c5e0";
+        // $txn_text = "test test";
+
         //NEED TO FIND THE VAR NAME WHER THE RECORDING URL IS STORED IN THE ACTIVE INSTRUMENT
         $current_active_ivr_script = $this->loadScript();
         foreach($current_active_ivr_script as $field_name => $field){
@@ -364,7 +368,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
         $filter     = "[$recording_var] = '" . $recording_url . "' ";
-        $fields     = array("record_id");
+        $fields     = array("record_id", "caller_phone_number");
         $q          = \REDCap::getData('json', null , $fields  , null, null, false, false, false, $filter);
         $results    = json_decode($q,true);
 
@@ -372,14 +376,24 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         if(!empty($results)){
             $result     = current($results);
             $record_id  = $result["record_id"];
-            
+            $caller     = $result["caller_phone_number"];
             $data = array();
             $data["record_id"]          = $record_id;
             $data["vm_transcription"]   = $txn_text;
             $r = \REDCap::saveData('json', json_encode(array($data)) );
-            $this->emDebug("did it save txn?", $r);
+            $this->emDebug("did it save txn? now send email", $r);
+
+            $subject 		= "Catch Study Voice Mail Recording";
+            $msg_arr        = array();
+            $msg_arr[]      = "<p>A new voice recording from phone number $caller [record_id = $record_id] was recieved.</p>";
+            $msg_arr[]	    = "<p><a href='".$recording_url."'>Click to listen to voicemail.</a></p>";
+            $msg_arr[]      = "<p>Here is computer generated voice transcription (accuracy varies)<p>";
+            $msg_arr[]      = "<blockquote>$txn_text</blockquote>";
+			$this->sendEmail($subject, implode("\r\n", $msg_arr));
         }
     }
+
+
 
     /**
      * Set Temp Store Proj Settings
@@ -463,7 +477,15 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     /*
         USE mail func
     */
-    public function sendEmail($subject, $msg, $from="Twilio VM", $to="this_project_admin@stanford.edu"){
+    public function sendEmail($subject, $msg, $from="Twilio VM", $to=""){
+        $to = $this->getProjectSetting("vm_email");
+
+        $this->emDebug("send email", $to);
+
+        if(empty($to)){
+            return;
+        }
+
         //boundary
         $semi_rand = md5(time());
         $mime_boundary = "==Multipart_Boundary_x{$semi_rand}x";

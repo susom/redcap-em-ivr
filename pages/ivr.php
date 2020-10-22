@@ -51,9 +51,6 @@ if( !empty($call_vars["previous_step"]) ){
 		if( !empty($_POST["RecordingSid"]) && !empty($_POST["RecordingUrl"]) && !empty($prev_field["voicemail"]) ){
 			$recording_url 	= trim(filter_var($_POST["RecordingUrl"], FILTER_SANITIZE_STRING));
 			$choice 		= $recording_url;
-			// $subject 		= "Voice Mail Recording";
-			// $msg 	 		= "<a href='".$recording_url."'>Click to listen to voicemail.</a>";
-			// $module->sendEmail($subject, $msg);
 		}
 
 		//STORE the field_name + value into call_vars
