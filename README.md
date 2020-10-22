@@ -17,6 +17,7 @@ This EM works in conjunction with its Associated Project to manage an Interactiv
 * when [expected_digits] > 1 the phrase "Followed by the 'pound' sign." will be automatically inserted after the [field_label] prompt text, plan accordingly
 * when using [radio/truefalse/yesno/dropdown] fields with preset number/value options.  The caller will be prompted in the following manner "For [value] press [number]" in sequence.   eg. "For Cats press 1 ,  For Dogs press 2"
 * Each IVR Project needs these two specific variables somewhere in them **[caller_phone_number] and [vm_transcription]** with **"@IGNORE"** annotations
+* voicemail/recording transcriptions if any will be posted back into the field var [vm_transcription] 
 
 ## Reference
 

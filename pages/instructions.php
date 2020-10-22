@@ -25,6 +25,7 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
         <li>when [expected_digits] > 1 the text "Followed by the 'pound' sign." will be automatically inserted after the [field_label] prompt text, so plan accordingly</li>
         <li>when using [radio/truefalse/yesno/dropdown] fields with preset number/value options.  The caller will be prompted in the following manner "For [value] press [number]" in a loop with .5 second pause in between.  eg. "For Cats press 1 ,  For Dogs press 2"</li>
         <li>Each IVR Project needs these two specific records somewhere in them [caller_phone_number] and [vm_transcription] with "@IGNORE" annotations</li>
+        <li>voicemail/recording transcriptions if any will be posted back into the field var [vm_transcription]</li>
     </ul>
     
     <h5>Reference</h5>
