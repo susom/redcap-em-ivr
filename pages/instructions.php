@@ -16,7 +16,6 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
         <li>Script should flow TOP to BOTTOM</li>
         <li>Use [descriptive] fields for speaking text only</li>
         <li>Use [field_label] fields for speaking text that immedietely precedes input prompts</li>
-        <li>Double carriage return in [field_label] will add an automatic 1 second pause</li>
         <li>Script MUST end with a [descriptive] field to end the call eg. "Thank you , Good bye"</li>
         <li>There will be a 1 second pause between fields/script steps</li>
         <li>[field_note] MUST be used to describe number of [expected_digits] as well as set [voicemail] settings in JSON FORMAT!</li>
