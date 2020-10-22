@@ -372,7 +372,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $q          = \REDCap::getData('json', null , $fields  , null, null, false, false, false, $filter);
         $results    = json_decode($q,true);
 
-        $this->emDebug("wtf", $results);
         if(!empty($results)){
             $result     = current($results);
             $record_id  = $result["record_id"];
@@ -389,7 +388,16 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $msg_arr[]	    = "<p><a href='".$recording_url."'>Click to listen to voicemail.</a></p>";
             $msg_arr[]      = "<p>Here is computer generated voice transcription (accuracy varies)<p>";
             $msg_arr[]      = "<blockquote>$txn_text</blockquote>";
-			$this->sendEmail($subject, implode("\r\n", $msg_arr));
+            
+            $to = $this->getProjectSetting("vm_email");
+            if(empty($to)){
+                return;
+            }
+            
+            $e = \REDCap::email($to, 'redcap@stanford.edu', $subject, implode("\r\n", $msg_arr));
+            if($e){
+                $this->emDebug("email succesfully sent");
+            }
         }
     }
 
@@ -472,39 +480,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
         return $audio_file;
-    }
-    
-    /*
-        USE mail func
-    */
-    public function sendEmail($subject, $msg, $from="Twilio VM", $to=""){
-        $to = $this->getProjectSetting("vm_email");
-
-        $this->emDebug("send email", $to);
-
-        if(empty($to)){
-            return;
-        }
-
-        //boundary
-        $semi_rand = md5(time());
-        $mime_boundary = "==Multipart_Boundary_x{$semi_rand}x";
-
-        //headers for attachment
-        //header for sender info
-        $headers = "From: "." <".$from.">";
-        $headers .= "\nMIME-Version: 1.0\n" . "Content-Type: multipart/mixed;\n" . " boundary=\"{$mime_boundary}\"";
-
-        //multipart boundary
-        $message = "--{$mime_boundary}\n" . "Content-Type: text/html; charset=\"UTF-8\"\n" .
-            "Content-Transfer-Encoding: 7bit\n\n" . $msg . "\n\n";
-
-        if (!mail($to, $subject, $message, $headers)) {
-            $this->emDebug("Email NOT sent");
-            return false;
-        }
-        $this->emDebug("Email sent");
-        return true;
     }
 }
 ?>
