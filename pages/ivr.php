@@ -62,7 +62,7 @@ if( !empty($call_vars["previous_step"]) ){
 		
 		//SAVE WHAT WE HAVE SO FAR
 		$call_vars[$rc_var] = $rc_val;
-		$module->IVRHandler($call_vars);
+		$call_vars = $module->IVRHandler($call_vars);
 	}
 }
 

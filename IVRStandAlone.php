@@ -116,7 +116,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         // WE ONLY RECURSE IF ITS A NON INPUT /DEscriptive Field
         if($field_type == "descriptive"){
+            $this->emDebug("i should be here ater selecting 1 ", $this_step);
             if( !empty($branching_logic) ){
+                // $this->emDebug("i should be here ater selecting 1 cause its descriptive with branching, shoot might not have record id yet! ",$record_id,  $this_step, $branching_logic);
                 //has branching
                 if($record_id){
                     //has record_id
@@ -341,7 +343,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
         // $this->emDebug("Did it save this step?", $data, $r , $call_vars);
-        return;
+        return $call_vars;
     }
 
 
