@@ -42,7 +42,8 @@
 	},
 
 	"no-auth-pages": [
-		"pages/ivr"
+		"pages/ivr",
+		"pages/txn_webhook"
 	],
 
 	"project-settings": [

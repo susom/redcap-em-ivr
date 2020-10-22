@@ -52,13 +52,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $field_label        = $field["field_label"];
             $choices            = $field["select_choices_or_calculations"];
             $branching_logic    = $field["branching_logic"];
+            $annotation         = trim($field["field_annotation"]);
 
             $field_note         = json_decode($field["field_note"],1); //MUST BE JSON
             $expected_digits    = array_key_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
             $voicemail_opts     = array_key_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
 
             // GET FIELDS FROM INSTRUMENT CONTAINING IVR SCRIPT
-            if( $form_name == $this->script_instrument ){
+            if( $form_name == $this->script_instrument && $annotation !== "@IGNORE"){
                 //PROCESS PRESET CHOICES 
                 $preset_choices = array();
                 if($field_type == "yesno" || $field_type  == "truefalse" || $field_type  == "radio" || $field_type == "dropdown"){
@@ -90,6 +91,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }
 
+        // $this->emDebug("new script", $new_script);
+        
         //SET UP THE INITIAL call_vars SESSION VARIABLES to run the script
         if(!is_null($storage_key)){
             $this->setTempStorage($storage_key, "ivr_language", $this->ivr_language);
@@ -105,7 +108,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $this->setTempStorage($storage_key, "current_step", $first_step["field_name"]);
         }
 
-        return true;
+        return $new_script;
     }
 
     public function recurseCurrentSteps($current_step, $call_vars, $container){
@@ -309,7 +312,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 $gather->pause(['length' => .25]);
             }
         }else if(!empty($voicemail)){
-            $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribe' => 'true', "finishOnKey" => "#"]);
+            $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
+            $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
         
         //3 RESET CALL VARS FOR NEXT IVR STEP
@@ -346,6 +350,36 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         return $call_vars;
     }
 
+
+    public function vmTranscriptionPostbackHandler($recording_url, $txn_text){
+        $this->emDebug("find this txn url and save txn text", $recording_url, $txn_text);
+
+        //NEED TO FIND THE VAR NAME WHER THE RECORDING URL IS STORED IN THE ACTIVE INSTRUMENT
+        $current_active_ivr_script = $this->loadScript();
+        foreach($current_active_ivr_script as $field_name => $field){
+            if( !empty($field["voicemail"]) ){
+                $recording_var = $field_name;
+                break;
+            }
+        }
+
+        $filter     = "[$recording_var] = '" . $recording_url . "' ";
+        $fields     = array("record_id");
+        $q          = \REDCap::getData('json', null , $fields  , null, null, false, false, false, $filter);
+        $results    = json_decode($q,true);
+
+        $this->emDebug("wtf", $results);
+        if(!empty($results)){
+            $result     = current($results);
+            $record_id  = $result["record_id"];
+            
+            $data = array();
+            $data["record_id"]          = $record_id;
+            $data["vm_transcription"]   = $txn_text;
+            $r = \REDCap::saveData('json', json_encode(array($data)) );
+            $this->emDebug("did it save txn?", $r);
+        }
+    }
 
     /**
      * Set Temp Store Proj Settings

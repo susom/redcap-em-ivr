@@ -13,7 +13,6 @@ use Twilio\TwiML\VoiceResponse;
 4. call_vars will hold data throughout the call , key = Callsid
 */
 
-
 // POST FROM TWILIO
 $temp_call_storage_key 	= trim(filter_var($_POST["CallSid"], FILTER_SANITIZE_STRING));
 $choice 				= isset($_POST["Digits"])  ? trim(filter_var($_POST["Digits"], FILTER_SANITIZE_NUMBER_INT)) : null;
@@ -28,6 +27,8 @@ if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] ==
 	if($module->loadScript($temp_call_storage_key)){
 		$call_vars 	= $module->getTempStorage($temp_call_storage_key);
 		// $module->emDebug("First contact Load up the call_vars", $call_vars);
+
+		$module->setTempStorage($temp_call_storage_key , "caller_phone_number", $_POST["Caller"] );
 	}
 }
 
