@@ -313,8 +313,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         //3 RESET CALL VARS FOR NEXT IVR STEP
         $storage_key = $call_vars["storage_key"];
         $this->setTempStorage($storage_key, "previous_step", $current_step_name);
-
-        //TODO , FIND THE NEXT STEP
         $this->setTempStorage($storage_key, "current_step", $next_step);
     }
 
