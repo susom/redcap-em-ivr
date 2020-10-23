@@ -384,7 +384,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
             $subject 		= "Catch Study Voice Mail Recording";
             $msg_arr        = array();
-            $msg_arr[]      = "<p>A new voice recording from phone number $caller [record_id = $record_id] was recieved.</p>";
+            $msg_arr[]      = "<p>From $caller [Redcap record_id = $record_id] was recieved.</p>";
             $msg_arr[]	    = "<p><a href='".$recording_url."'>Click to listen to voicemail.</a></p>";
             $msg_arr[]      = "<p>Here is computer generated voice transcription (accuracy varies)<p>";
             $msg_arr[]      = "<blockquote>$txn_text</blockquote>";
@@ -394,7 +394,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 return;
             }
             
-            $e = \REDCap::email($to, 'redcap@stanford.edu', $subject, implode("\r\n", $msg_arr));
+            $e = \REDCap::email($to, $caller, $subject, implode("\r\n", $msg_arr));
             if($e){
                 $this->emDebug("email succesfully sent");
             }
