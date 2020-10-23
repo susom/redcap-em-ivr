@@ -394,7 +394,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 return;
             }
             
-            $e = \REDCap::email($to, $caller, $subject, implode("\r\n", $msg_arr));
+            $e = \REDCap::email($to, $caller."@catchstudy.org" , $subject, implode("\r\n", $msg_arr));
             if($e){
                 $this->emDebug("email succesfully sent");
             }
