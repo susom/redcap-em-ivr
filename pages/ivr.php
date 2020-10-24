@@ -28,6 +28,7 @@ if(empty($call_vars) || ( isset($_POST["CallStatus"]) && $_POST["CallStatus"] ==
 		$call_vars 	= $module->getTempStorage($temp_call_storage_key);
 		// $module->emDebug("First contact Load up the call_vars", $call_vars);
 
+		$module->setTempStorage($temp_call_storage_key , "call_ts",  date("Y-m-d h:i:s") );
 		$module->setTempStorage($temp_call_storage_key , "caller_phone_number", $_POST["Caller"] );
 	}
 }
