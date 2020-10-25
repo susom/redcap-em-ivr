@@ -312,7 +312,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }else if(!empty($voicemail)){
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
-            // $txn_webhook = "http://localhost/api/?type=module&prefix=ivr&page=pages%2Ftxn_webhook&pid=44&NOAUTH";
+            // $txn_webhook = "http://b8a21c4fa0c3.ngrok.io/api/?type=module&prefix=ivr&page=pages%2Ftxn_webhook&pid=44&NOAUTH";
 
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
@@ -382,7 +382,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $r = \REDCap::saveData('json', json_encode(array($data)) );
             $this->emDebug("did it save txn? now send email", $r);
 
-            $subject 		= "Catch Study Voice Mail Recording";
+            $subject 		= "Voice Recording from $caller";
             $msg_arr        = array();
             $msg_arr[]      = "<p>From $caller [Redcap record_id = $record_id] was recieved.</p>";
             $msg_arr[]	    = "<p><a href='".$recording_url."'>Click to listen to voicemail.</a></p>";
@@ -394,9 +394,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 return;
             }
             
-            $e = \REDCap::email($to, $caller."@catchstudy.org" , $subject, implode("\r\n", $msg_arr));
+            $e = \REDCap::email($to, "no-reply@catchstudy.org" , $subject, implode("\r\n", $msg_arr));
             if($e){
-                $this->emDebug("email succesfully sent");
+                $this->emDebug("email succesfully sent", $e);
             }
         }
     }
