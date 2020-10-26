@@ -207,6 +207,12 @@
 			"type": "text"
 		},
 		{
+			"key": "vm_email_from",
+			"name": "<b>From email for sending voice recordings to above email:</b>",
+			"required": false,
+			"type": "text"
+		},
+		{
 			"key": "enable-project-debug-logging",
 			"name": "<b>Enable Debug Logging</b><br><i>(optional)</i> Requires installation and configuration of emLogger",
 			"required": false,

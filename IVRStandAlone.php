@@ -389,12 +389,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $msg_arr[]      = "<p>Here is computer generated voice transcription (accuracy varies)<p>";
             $msg_arr[]      = "<blockquote>$txn_text</blockquote>";
             
-            $to = $this->getProjectSetting("vm_email");
+            $to     = $this->getProjectSetting("vm_email");
+            $from   = $this->getProjectSetting("vm_email_from");
+            
             if(empty($to)){
                 return;
             }
             
-            $e = \REDCap::email($to, "no-reply@catchstudy.org" , $subject, implode("\r\n", $msg_arr));
+            $e = \REDCap::email($to, $from , $subject, implode("\r\n", $msg_arr));
             if($e){
                 $this->emDebug("email succesfully sent", $e);
             }
