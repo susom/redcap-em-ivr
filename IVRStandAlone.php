@@ -214,7 +214,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     preg_match_all("/{{([\d\w\s]+)(?:(?:=?)([^}]+))?}}/" ,$say_line, $match_arr);
                     if(!empty($match_arr[0])){
                         $action = $match_arr[1][0];
-                        $value  = $match_arr[2][0];
+                        $value  = ceil($match_arr[2][0]);
                         
                         if($action == "PAUSE"){
                             $say_arr[] = array("pause" => $value);
@@ -287,7 +287,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
         foreach($say_arr as $method_value){
             if(array_key_exists("pause", $method_value) ){
-                $gather->pause(["length" => $method_value["pause"] ]);  
+                $pause_value = ceil($method_value["pause"]);
+                $gather->pause(["length" => $pause_value ]);  
             }else if(array_key_exists("dial", $method_value) ){
                 $response->dial($method_value["dial"]);  
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
@@ -308,7 +309,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             foreach($presets as $digit =>  $value){
                 $prompt = "For $value press $digit";
                 $gather->say($prompt, $voicelang_opts );
-                $gather->pause(['length' => .25]);
+                $gather->pause(['length' => 1]);
             }
         }else if(!empty($voicemail)){
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
