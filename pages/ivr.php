@@ -16,7 +16,7 @@ use Twilio\TwiML\VoiceResponse;
 // POST FROM TWILIO
 $temp_call_storage_key 	= trim(filter_var($_POST["CallSid"], FILTER_SANITIZE_STRING));
 $choice 				= isset($_POST["Digits"])  ? trim(filter_var($_POST["Digits"], FILTER_SANITIZE_NUMBER_INT)) : null;
-// $module->emDebug("POST FROM TWILIO", $_POST);
+$module->emDebug("POST FROM TWILIO", $_POST["CallSid"], $_POST["CallStatus"], $_POST["Digits"], $_POST["msg"]);
 
 // CALL SESSION STORAGE - PERSISTS THROUGH OUT CALL (starts empty);
 $call_vars 				= $module->getTempStorage($temp_call_storage_key);
@@ -43,7 +43,7 @@ if( !empty($call_vars["previous_step"]) ){
 
 	//IF HAD PRESET CHOICES, REPEAT STEP IF INPUT IS NOT WITHIN EXPECTED 
 	if( !empty($prev_field["preset_choices"]) &&  !array_key_exists($choice , $prev_field["preset_choices"]) ){
-		$module->emDebug("unexpected input, repeat step", $prev_step);
+		// $module->emDebug("unexpected input, repeat step", $prev_step);
 		$call_vars["current_step"] 	= $prev_step;
 		$call_vars["repeat"] 		= true;
 	}else{

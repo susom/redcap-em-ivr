@@ -119,14 +119,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         // WE ONLY RECURSE IF ITS A NON INPUT /DEscriptive Field
         if($field_type == "descriptive"){
-            $this->emDebug("i should be here ater selecting 1 ", $this_step);
             if( !empty($branching_logic) ){
-                // $this->emDebug("i should be here ater selecting 1 cause its descriptive with branching, shoot might not have record id yet! ",$record_id,  $this_step, $branching_logic);
                 //has branching
                 if($record_id){
                     //has record_id
                     $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
                     if($valid){
+                        $this->emDebug("descriptive with branching, branching valid, have record_id",$record_id,  $this_step, $branching_logic);
                         array_push($container, $current_step);
                     }
                 }
@@ -186,7 +185,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
      * @return array
      */
     public function getCurrentIVRstep($response, $call_vars){
-        $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"]);
+        // $this->emDebug("HANDLE CURRENT STEP", $call_vars["previous_step"], $call_vars["current_step"]);
 
         // THIS IS THE CURRENT STEP, BUT THERE MAY BE OTHER STEPS TO FLOW DOWN TO IF THIS IS ONLY A DESCRIPTIVE TEXT
         $this_step          = $call_vars["current_step"];
@@ -194,7 +193,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         
         // GATHER UP STEPs UNTIL REACHING An input step (evaluate branching if need be)
         $total_fields_in_step = $this->recurseCurrentSteps($current_step, $call_vars, array());
-        $this->emDebug("total fields in step", $total_fields_in_step);
+        $this->emDebug("FIELDS IN CURRENT STEP", $total_fields_in_step);
 
         $say_arr = array();
         foreach($total_fields_in_step as $step){
@@ -233,7 +232,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             //SO WE CAN COME OUT OF THE LOOP ON THE correct current_step
         }
 
-        $this->emDebug("all of the says in the combined steps", $say_arr);
+        // $this->emDebug("all of the says in the combined steps", $say_arr);
 
         $presets        = $current_step_choices;
         $voicemail      = $current_step_vm;
@@ -288,7 +287,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         foreach($say_arr as $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $pause_value = ceil($method_value["pause"]);
-                $gather->pause(["length" => $pause_value ]);  
+                $response->pause(["length" => $pause_value ]);  
             }else if(array_key_exists("dial", $method_value) ){
                 $response->dial($method_value["dial"]);  
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
@@ -348,7 +347,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        // $this->emDebug("Did it save this step?", $data, $r , $call_vars);
+        $this->emDebug("Did it save this step?", $data, $r);
         return $call_vars;
     }
 
