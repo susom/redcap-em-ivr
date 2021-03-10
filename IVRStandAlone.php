@@ -49,17 +49,17 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             // the important stuff
             $form_name          = $field["form_name"];
             $field_type         = $field["field_type"];
+            $annotation_arr     = explode(" ", trim($field["field_annotation"]));
             $field_label        = $field["field_label"];
             $choices            = $field["select_choices_or_calculations"];
             $branching_logic    = $field["branching_logic"];
-            $annotation         = trim($field["field_annotation"]);
 
             $field_note         = json_decode($field["field_note"],1); //MUST BE JSON
             $expected_digits    = array_key_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
             $voicemail_opts     = array_key_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
 
             // GET FIELDS FROM INSTRUMENT CONTAINING IVR SCRIPT
-            if( $form_name == $this->script_instrument && $annotation !== "@IGNORE"){
+            if( $form_name == $this->script_instrument && !in_array("@IGNORE",$annotation_arr)){
                 //PROCESS PRESET CHOICES 
                 $preset_choices = array();
                 if($field_type == "yesno" || $field_type  == "truefalse" || $field_type  == "radio" || $field_type == "dropdown"){
@@ -78,6 +78,16 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     } 
                 }
 
+                if( in_array("@NOREAD",$annotation_arr) ){
+                    $field_label = "";
+                    $annotation  = "@NOREAD";
+                }
+
+                if(in_array("@SOUNDFILE",$annotation_arr)){
+                    $field_label = "";
+                    $annotation  = "@SOUNDFILE";
+                }
+
                 //SET UP INITIAL "next_step"  IF ANY KIND OF BRANCHING IS INVOLVED WONT BE RELIABLE
                 $new_script[$field_name]  = array(
                     "field_name"        => $field_name,
@@ -87,6 +97,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     "voicemail"         => $voicemail_opts,
                     "expected_digits"   => $expected_digits,
                     "branching_logic"   => $branching_logic,
+                    "annotation"        => $annotation
                 );
             }
         }
@@ -179,7 +190,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         return $container;
     }
-    
+
     /** 
      * FROM CURRENT STATE, PRODUCE THE CURRENT STEP OF THE SCRIPT
      * @return array
@@ -203,6 +214,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $current_step_choices   = $step["preset_choices"];
             $current_step_vm        = $step["voicemail"];
             $current_step_expected  = $step["expected_digits"];
+            $current_annotation     = $step["annotation"];
 
             // SPLIT UP "say" text into discreet say blocks by line break 
             // parse any special {{instructions}} 
@@ -213,7 +225,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     preg_match_all("/{{([\d\w\s]+)(?:(?:=?)([^}]+))?}}/" ,$say_line, $match_arr);
                     if(!empty($match_arr[0])){
                         $action = $match_arr[1][0];
-                        $value  = ceil($match_arr[2][0]);
+                        $value  = is_numeric($match_arr[2][0]) ? ceil($match_arr[2][0]) : $match_arr[2][0];
                         
                         if($action == "PAUSE"){
                             $say_arr[] = array("pause" => $value);
@@ -228,6 +240,12 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 }
             }
 
+            if($current_annotation == "@SOUNDFILE"){
+                $url = $this->handleSoundFiles($current_step_name);
+                if(!empty($url)){
+                    $say_arr[] = array("play" => $url);
+                }
+            }
             //WILL ALWAYS END UP ON AN INPUT, WILL ONLY BE MULTIPLE IF SOME ARE descriptive fields
             //SO WE CAN COME OUT OF THE LOOP ON THE correct current_step
         }
@@ -237,6 +255,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $presets        = $current_step_choices;
         $voicemail      = $current_step_vm;
         $expected_digs  = $current_step_expected;
+        $annotation     = $current_annotation;
         
         
         //may need to repeat
@@ -265,13 +284,15 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
         $gather_options = array('numDigits' => $expected_digs);
         
-        if($expected_digs > 1){
-            $gather_options["finishOnKey"] = "#";
-            array_push($say_arr, array("say" => "Followed by the pound sign.") );
-        }
-        if(!empty($voicemail)){
-            $gather_options["finishOnKey"] = "#";
-            array_push($say_arr, array("say" => "When you are finished recording press the pound sign.") );
+        if($annotation != "@NOREAD" && $annotation != "@SOUNDFILE"){
+            if($expected_digs > 1){
+                $gather_options["finishOnKey"] = "#";
+                array_push($say_arr, array("say" => "Followed by the pound sign.") );
+            }
+            if(!empty($voicemail)){
+                $gather_options["finishOnKey"] = "#";
+                array_push($say_arr, array("say" => "When you are finished recording press the pound sign.") );
+            }
         }
 
         //PAUSE TO BREATHE
@@ -292,6 +313,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 $response->dial($method_value["dial"]);  
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
                 return;
+            }else if(array_key_exists("play", $method_value) ){
+                $url = $method_value["play"];
+                $gather->play($url);
             }else{
                 if(!empty($current_step_vm)){
                     $response->say($method_value["say"], $voicelang_opts); 
@@ -304,7 +328,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         //1 SET UP DIGITS REQUEST (EVERY STEP OF IVR MUST ASK FOR INPUT TO MOVE ON)
         //2 SAY OR PROMPT
-        if(!empty($presets)){
+        if(!empty($presets) && $annotation != "@NOREAD"){
             foreach($presets as $digit =>  $value){
                 $prompt = "For $value press $digit";
                 $gather->say($prompt, $voicelang_opts );
@@ -312,8 +336,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }else if(!empty($voicemail)){
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
-            // $txn_webhook = "http://b8a21c4fa0c3.ngrok.io/api/?type=module&prefix=ivr&page=pages%2Ftxn_webhook&pid=44&NOAUTH";
-
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
         
@@ -403,7 +425,61 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
     }
 
+    public function handleSoundFiles($step_name){        
+        //EXTRACT THE EDOC INFORMATION FROM RC DB, NO BUILT IN METHODS TO GET THIS DATA
+        $sql        = "SELECT doc_id, stored_name, mime_type, doc_name, doc_size, file_extension, stored_date 
+                        FROM redcap_metadata INNER JOIN redcap_edocs_metadata
+                        ON redcap_metadata.edoc_id = redcap_edocs_metadata.doc_id 
+                        WHERE redcap_metadata.project_id = ? AND redcap_metadata.field_name = ?";
+        $parameters = array(PROJECT_ID, $step_name);
 
+        //TODO Better way to do this and check for errors?
+        $results    = $this->framework->query($sql, $parameters);
+        while ($row = $results->fetch_assoc()) {
+            if(!empty($row)){
+                $audio_file = $this->getEdocAssetUrl($row);
+                return $audio_file;
+                break;
+            }
+        }
+        return false;
+    }
+
+    /*
+        Pull static files from within EM dir Structure
+    */
+    function getEdocAssetUrl($file_info){
+        $doc_id         = $file_info["doc_id"];
+        $mime_type      = $file_info["mime_type"];
+
+        // Dont need
+        // $stored_name    = $file_info["stored_name"];
+        // $doc_name       = $file_info["doc_name"];
+        // $doc_size       = $file_info["doc_size"];
+        // $file_extension = $file_info["file_extension"];
+        // $stored_date    = $file_info["stored_date"];
+
+        $doc_temp_path      = \Files::copyEdocToTemp($doc_id, false, true);
+        // TODO NEED TO UNLINK THE TEMP FILE PATH
+        // MAYBE PASS IN ARRAY WITH Call_vars and delete on hang up ?
+        // unlink($doc_temp_path);
+        
+        $qs = array(
+             "mime_type=$mime_type"
+            ,"doc_temp_path=$doc_temp_path"
+        );
+
+        $getEdocAsset   = "getEdocAsset.php?" . implode("&",$qs);
+        $audio_file     = $this->framework->getUrl($getEdocAsset , true, true);
+
+        $hard_domain = null;
+        if(!empty($hard_domain)){
+            $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
+        }
+        
+        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
+        return $audio_file;
+    }
 
     /**
      * Set Temp Store Proj Settings
@@ -462,26 +538,5 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         return $next_id;
     }
 
-
-
-
-
-
-
-
-
-    /*
-        Pull static files from within EM dir Structure
-    */
-    function getAssetUrl($audiofile = "default.mp3", $hard_domain = ""){
-        $audio_file = $this->framework->getUrl("getAsset.php?file=".$audiofile."&ts=". $this->getLastModified() , true, true);
-        
-        if(!empty($hard_domain)){
-            $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
-        }
-
-        // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
-        return $audio_file;
-    }
 }
 ?>

@@ -20,6 +20,8 @@
 		}
 	],
 
+	"framework-version": 5,
+	
 	"permissions": [
 		"redcap_module_system_enable",
 		"redcap_module_project_enable",
@@ -43,7 +45,8 @@
 
 	"no-auth-pages": [
 		"pages/ivr",
-		"pages/txn_webhook"
+		"pages/txn_webhook",
+		"getEdocAsset"
 	],
 
 	"project-settings": [

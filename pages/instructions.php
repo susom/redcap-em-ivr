@@ -29,6 +29,11 @@ require_once APP_PATH_DOCROOT . 'ProjectGeneral/header.php';
     </ul>
     
     <h5>Reference</h5>
+    <p>Currently Recognized @ACTIONTAGS</p>
+    <ul>
+        <li>@NOREAD: If this is applied to the field, then the RoboVoice will not read the label nor the preset choice inputs</li>
+        <li>@SOUNDFILE: Descriptive fields have the ability to hold an uploaded MP3 file.  The IVR will play this in lieu of text to speech.</li>
+    </ul>
     <p>Currently Recognized {{Special Instructions}}</p>
     <ul>
         <li>{{PAUSE=n}} : input an n second pause eg. {{PAUSE=3}} or {{PAUSE=.5}} for a 3 second and a half second pause respectively</li>
