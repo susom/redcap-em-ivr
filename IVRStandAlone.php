@@ -313,7 +313,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         //SET UP GATHER , EVERY STEP MUST END IN gather
         if(empty($current_step_vm)){
             // $gather_options[] = "";
-            $this->emDebug("this is where i do the gather right? add a loop?", $gather_options);
             // gotta be careful using gather method, it really seems to add a long pause when jumping back to response object context
             $gather = $response->gather($gather_options); 
         }
@@ -334,6 +333,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 }
                 $url = $method_value["play"];
                 $gather->play($url, array("loop" => 3));
+                
+                //TODO NEED A BETTER WAY TO LOOP WITHOUT IMMEDIELTEY REPEATING
+                // $gather->pause(array("length" => 2));
+                // $this->emDebug("lets try repeating after 2 seconds here is the current step");
+                // $response->redirect("https://990d8deb23ed.ngrok.io/api/?type=module&prefix=ivr&page=pages%2Fivr&pid=41&NOAUTH", array("method"=> "POST"));
             }else{
                 if(!empty($current_step_vm)){
                     $response->say($method_value["say"], $voicelang_opts); 
