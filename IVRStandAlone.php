@@ -136,7 +136,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     //has record_id
                     $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
                     if($valid){
-                        $this->emDebug("descriptive with branching, branching valid, have record_id",$record_id,  $this_step, $branching_logic);
+                        // $this->emDebug("descriptive with branching, branching valid, have record_id" , $this_step, $branching_logic);
                         array_push($container, $current_step);
                     }
                 }
@@ -160,6 +160,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }else{
             if( !empty($branching_logic) ){
+                // $this->emDebug("not descriptive field type looking for why VM inhertiting annotation of SOUNDFILE", $call_vars["ivr_dictionary_script"]["recording_all_2"]);
                 //has branching
                 if($record_id){
                     //has record_id
@@ -187,7 +188,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 array_push($container, $current_step);
             }
         }
-
+        // $this->emDebug("which step and and what $this_step", $container);
         return $container;
     }
 
@@ -303,7 +304,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             // gotta be careful using gather method, it really seems to add a long pause when jumping back to response object context
             $gather = $response->gather($gather_options); 
         }
-
+    
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
         foreach($say_arr as $method_value){
             if(array_key_exists("pause", $method_value) ){
@@ -314,6 +315,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
                 return;
             }else if(array_key_exists("play", $method_value) ){
+                if(is_null($gather)){
+                    $gather = $response->gather();
+                }
                 $url = $method_value["play"];
                 $gather->play($url);
             }else{
@@ -325,7 +329,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //THERE IS A NATURAL SMALL PAUSE BETWEEN DIFFERNT SAY BLOCKS
             }
         }
-
         //1 SET UP DIGITS REQUEST (EVERY STEP OF IVR MUST ASK FOR INPUT TO MOVE ON)
         //2 SAY OR PROMPT
         if(!empty($presets) && $annotation != "@NOREAD"){
@@ -334,7 +337,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 $gather->say($prompt, $voicelang_opts );
                 $gather->pause(['length' => 1]);
             }
-        }else if(!empty($voicemail)){
+        }elseif(!empty($voicemail)){
+            $this->emDebug("is this voicemail working?");
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
@@ -369,7 +373,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
-        $this->emDebug("Did it save this step?", $data, $r);
+        if(empty($r["errors"])){
+            $this->emDebug("svaed step?", $data);
+        }
         return $call_vars;
     }
 
@@ -402,7 +408,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $data["record_id"]          = $record_id;
             $data["vm_transcription"]   = $txn_text;
             $r = \REDCap::saveData('json', json_encode(array($data)) );
-            $this->emDebug("did it save txn? now send email", $r);
+            // $this->emDebug("did it save txn? now send email", $r);
 
             $subject 		= "Voice Recording from $caller";
             $msg_arr        = array();
@@ -472,12 +478,12 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $getEdocAsset   = "getEdocAsset.php?" . implode("&",$qs);
         $audio_file     = $this->framework->getUrl($getEdocAsset , true, true);
 
-        $hard_domain = null;
+        $hard_domain = null; //"https://255a260e5d89.ngrok.io";
         if(!empty($hard_domain)){
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
         
-        $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
+        // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
         return $audio_file;
     }
 
