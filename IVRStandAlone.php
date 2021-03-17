@@ -117,6 +117,17 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
            
             $first_step = current($new_script);
             $this->setTempStorage($storage_key, "current_step", $first_step["field_name"]);
+
+            //Lets PreGenerate a Record, So it wont need to do it later...
+            // $next_id        = $this->getNextAvailableRecordId(PROJECT_ID);
+            // $this->setTempStorage($storage_key, "record_id", $next_id);
+            
+            // $startTS    = microtime(true);
+            // $data = array("record_id" => $next_id); 
+            // $r    = \REDCap::saveData('json', json_encode(array($data)) );
+            // if(empty($r["errors"])){
+            //     $this->emDebug("pregenerated record id $next_id", microtime(true) - $startTS);
+            // }
         }
 
         return $new_script;
@@ -301,6 +312,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         //SET UP GATHER , EVERY STEP MUST END IN gather
         if(empty($current_step_vm)){
+            // $gather_options[] = "";
+            $this->emDebug("this is where i do the gather right? add a loop?", $gather_options);
             // gotta be careful using gather method, it really seems to add a long pause when jumping back to response object context
             $gather = $response->gather($gather_options); 
         }
@@ -317,9 +330,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }else if(array_key_exists("play", $method_value) ){
                 if(is_null($gather)){
                     $gather = $response->gather();
+                    //must use "gather" instead of "response" so can cut off the audio with input and not have to play to end.
                 }
                 $url = $method_value["play"];
-                $gather->play($url);
+                $gather->play($url, array("loop" => 3));
             }else{
                 if(!empty($current_step_vm)){
                     $response->say($method_value["say"], $voicelang_opts); 
@@ -338,7 +352,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 $gather->pause(['length' => 1]);
             }
         }elseif(!empty($voicemail)){
-            $this->emDebug("is this voicemail working?");
+            $this->emDebug("is this voicemail working?", $current_step_vm, $voicemail);
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
@@ -354,7 +368,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
      * @return null
      */
     public function IVRHandler($call_vars) {
-        $data = array();
+        $data       = array();
+        $startTS    = microtime(true);
 
         // SET A record_id IF NOT AVAILABLE
         if(!isset($call_vars["record_id"])){
@@ -376,6 +391,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         if(empty($r["errors"])){
             $this->emDebug("svaed step?", $data);
         }
+
         return $call_vars;
     }
 
@@ -454,7 +470,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     /*
         Pull static files from within EM dir Structure
     */
-    function getEdocAssetUrl($file_info){
+    function getEdocAssetUrl($file_info, $hard_domain=null){
         $doc_id         = $file_info["doc_id"];
         $mime_type      = $file_info["mime_type"];
 
@@ -478,7 +494,6 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $getEdocAsset   = "getEdocAsset.php?" . implode("&",$qs);
         $audio_file     = $this->framework->getUrl($getEdocAsset , true, true);
 
-        $hard_domain = null; //"https://255a260e5d89.ngrok.io";
         if(!empty($hard_domain)){
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
