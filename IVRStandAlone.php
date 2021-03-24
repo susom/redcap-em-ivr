@@ -474,7 +474,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     /*
         Pull static files from within EM dir Structure
     */
-    function getEdocAssetUrl($file_info, $hard_domain="https://eb386f1cd653.ngrok.io"){
+    function getEdocAssetUrl($file_info, $hard_domain=""){
         $doc_id         = $file_info["doc_id"];
         $mime_type      = $file_info["mime_type"];
 
