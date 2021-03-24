@@ -320,7 +320,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
        
 
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
-        $second_last = count($say_arr) - 1;
+        $second_last    = count($say_arr) - 1;
         foreach($say_arr as $i =>  $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $pause_value = ceil($method_value["pause"]);
@@ -335,7 +335,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     //must use "gather" instead of "response" so can cut off the audio with input and not have to play to end.
                 }
                 $url    = $method_value["play"];
-                $loop   = $i == $second_last ? array("loop" => 3) : array(); 
+                $loop   = $i == $second_last && empty($voicemail)  ? array("loop" => 3) : array(); 
+                $this->emDebug("loop ", $loop);
                 $gather->play($url, $loop);
             }else{
                 if(!empty($current_step_vm)){
@@ -473,7 +474,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     /*
         Pull static files from within EM dir Structure
     */
-    function getEdocAssetUrl($file_info, $hard_domain=""){
+    function getEdocAssetUrl($file_info, $hard_domain="https://eb386f1cd653.ngrok.io"){
         $doc_id         = $file_info["doc_id"];
         $mime_type      = $file_info["mime_type"];
 
