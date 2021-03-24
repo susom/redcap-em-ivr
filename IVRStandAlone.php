@@ -317,8 +317,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $gather = $response->gather($gather_options); 
         }
     
+       
+
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
-        foreach($say_arr as $method_value){
+        $second_last = count($say_arr) - 1;
+        foreach($say_arr as $i =>  $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $pause_value = ceil($method_value["pause"]);
                 $response->pause(["length" => $pause_value ]);  
@@ -331,13 +334,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     $gather = $response->gather();
                     //must use "gather" instead of "response" so can cut off the audio with input and not have to play to end.
                 }
-                $url = $method_value["play"];
-                $gather->play($url, array("loop" => 3));
-                
-                //TODO NEED A BETTER WAY TO LOOP WITHOUT IMMEDIELTEY REPEATING
-                // $gather->pause(array("length" => 2));
-                // $this->emDebug("lets try repeating after 2 seconds here is the current step");
-                // $response->redirect("https://990d8deb23ed.ngrok.io/api/?type=module&prefix=ivr&page=pages%2Fivr&pid=41&NOAUTH", array("method"=> "POST"));
+                $url    = $method_value["play"];
+                $loop   = $i == $second_last ? array("loop" => 3) : array(); 
+                $gather->play($url, $loop);
             }else{
                 if(!empty($current_step_vm)){
                     $response->say($method_value["say"], $voicelang_opts); 
@@ -474,7 +473,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     /*
         Pull static files from within EM dir Structure
     */
-    function getEdocAssetUrl($file_info, $hard_domain=null){
+    function getEdocAssetUrl($file_info, $hard_domain=""){
         $doc_id         = $file_info["doc_id"];
         $mime_type      = $file_info["mime_type"];
 
