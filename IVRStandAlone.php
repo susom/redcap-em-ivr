@@ -99,6 +99,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     "branching_logic"   => $branching_logic,
                     "annotation"        => $annotation
                 );
+
+                if(in_array("@LASTSTEP",$annotation_arr)){
+                    $new_script[$field_name]["laststep"] = true;
+                }
             }
         }
 
@@ -216,7 +220,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         
         // GATHER UP STEPs UNTIL REACHING An input step (evaluate branching if need be)
         $total_fields_in_step = $this->recurseCurrentSteps($current_step, $call_vars, array());
-        $this->emDebug("FIELDS IN CURRENT STEP", $total_fields_in_step);
+        $this->emDebug("FIELDS IN CURRENT STEP", $current_step, $total_fields_in_step);
 
         $say_arr = array();
         foreach($total_fields_in_step as $step){
@@ -227,6 +231,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $current_step_vm        = $step["voicemail"];
             $current_step_expected  = $step["expected_digits"];
             $current_annotation     = $step["annotation"];
+            $laststep               = array_key_exists("laststep",$step);
 
             // SPLIT UP "say" text into discreet say blocks by line break 
             // parse any special {{instructions}} 
@@ -255,14 +260,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             if($current_annotation == "@SOUNDFILE"){
                 $url = $this->handleSoundFiles($current_step_name);
                 if(!empty($url)){
-                    $say_arr[] = array("play" => $url);
+                    $say_arr[] = array("play" => $url, "laststep" => $laststep);
                 }
             }
             //WILL ALWAYS END UP ON AN INPUT, WILL ONLY BE MULTIPLE IF SOME ARE descriptive fields
             //SO WE CAN COME OUT OF THE LOOP ON THE correct current_step
         }
 
-        // $this->emDebug("all of the says in the combined steps", $say_arr);
+        $this->emDebug("all of the says in the combined steps", $say_arr);
 
         $presets        = $current_step_choices;
         $voicemail      = $current_step_vm;
@@ -334,9 +339,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     $gather = $response->gather();
                     //must use "gather" instead of "response" so can cut off the audio with input and not have to play to end.
                 }
-                $url    = $method_value["play"];
-                $loop   = $i == $second_last && empty($voicemail)  ? array("loop" => 3) : array(); 
-                $this->emDebug("loop ", $loop);
+                $url        = $method_value["play"];
+                $laststep   = $method_value["laststep"];
+                $loop   = $i == $second_last && empty($voicemail) && !$laststep ? array("loop" => 3) : array(); 
+
                 $gather->play($url, $loop);
             }else{
                 if(!empty($current_step_vm)){
@@ -393,7 +399,9 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         $r    = \REDCap::saveData('json', json_encode(array($data)) );
         if(empty($r["errors"])){
-            $this->emDebug("svaed step?", $data);
+            $this->emDebug("SAVED STEP???? step?", $data);
+        }else{
+            $this->emDebug("Not saving? what happenged?", $r["errors"]);
         }
 
         return $call_vars;
