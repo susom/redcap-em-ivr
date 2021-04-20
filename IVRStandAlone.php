@@ -329,7 +329,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         foreach($say_arr as $i =>  $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $pause_value = ceil($method_value["pause"]);
-                $response->pause(["length" => $pause_value ]);  
+                
+                if(!empty($current_step_vm)){
+                    $response->pause(['length' => $pause_value]);
+                }else{
+                    $gather->pause(['length' => $pause_value]);
+                }
+                
+                
             }else if(array_key_exists("dial", $method_value) ){
                 $response->dial($method_value["dial"]);  
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
