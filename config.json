@@ -34,7 +34,7 @@
 		"project": [
 			{
 				"name": "IVR API Instructions",
-				"icon": "gear",
+				"icon": "fas fa-phone",
 				"url": "pages/instructions.php"
 			}
 		],
