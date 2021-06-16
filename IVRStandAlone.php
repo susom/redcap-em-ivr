@@ -141,6 +141,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $this_step          = $current_step["field_name"];
         $field_type         = $current_step["field_type"];
         $branching_logic    = $current_step["branching_logic"];
+        $is_laststep        = $current_step["laststep"];
         $record_id          = isset($call_vars["record_id"]) ? $call_vars["record_id"] : null;
 
         // WE ONLY RECURSE IF ITS A NON INPUT /DEscriptive Field
@@ -168,7 +169,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     continue; //to next element
                 }
 
-                if($next){
+                if($next && !$is_laststep){
                     $container = $this->recurseCurrentSteps($next_step, $call_vars, $container);
                     break;
                 }
@@ -191,7 +192,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                                 continue; //to next element
                             }
             
-                            if($next){
+                            if($next && !$is_laststep){
                                 $container = $this->recurseCurrentSteps($next_step, $call_vars, $container);
                                 break;
                             }
