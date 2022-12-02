@@ -1,6 +1,8 @@
 <?php
 namespace Stanford\IVRStandAlone;
 
+use ExternalModules\ExternalModules;
+
 require_once "emLoggerTrait.php";
 
 class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
@@ -583,10 +585,10 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $for_delete = [];
 
         //IS TWILIO CALLID ALWAYS 34 length?
-        //TODO ANYWAY TO PULL external_module_id dynamically?
-        //$this->emDebug("framework", $this->framework->getEnabledModules(PROJECT_ID)) ;
-        $external_module_id = 146;
+        $module_prefix      = $this->framework->getModuleInstance()->PREFIX;
+        $external_module_id = ExternalModules::getIdForPrefix($module_prefix);
         $parameters         = array($external_module_id, 34);
+
         $sql                = "SELECT *
                                 FROM redcap_external_module_settings
                                 WHERE external_module_id = ?
