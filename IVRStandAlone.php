@@ -18,14 +18,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
     public function __construct() {
 		parent::__construct();
 		// Other code to run when object is instantiated
-	    if (defined(PROJECT_ID)) { }
     }
 
     function redcap_every_page_top($project_id){
 		// every page load
     }
-    
-    /** 
+
+    /**
      * GET DESIGNATED SCRIPT PROJECT XML
      * @return array
      */
@@ -37,8 +36,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
         //GET THE DICTIONARY WITH SCRIPT
         $dict               = \REDCap::getDataDictionary(PROJECT_ID, "array");
-        
-        //MANIPULATE THE SCRIPT 
+
+        //MANIPULATE THE SCRIPT
         $next_step          = null;
         $new_script         = array();
 
@@ -53,14 +52,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $field_label        = $field["field_label"];
             $choices            = $field["select_choices_or_calculations"];
             $branching_logic    = $field["branching_logic"];
-
             $field_note         = json_decode($field["field_note"],1); //MUST BE JSON
-            $expected_digits    = array_key_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
-            $voicemail_opts     = array_key_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
+            $expected_digits    = property_exists("expected_digits", $field_note) ? $field_note["expected_digits"] : null;
+            $voicemail_opts     = property_exists("voicemail", $field_note) ? $field_note["voicemail"] : null;
 
             // GET FIELDS FROM INSTRUMENT CONTAINING IVR SCRIPT
             if( $form_name == $this->script_instrument && !in_array("@IGNORE",$annotation_arr)){
-                //PROCESS PRESET CHOICES 
+                //PROCESS PRESET CHOICES
                 $preset_choices = array();
                 if($field_type == "yesno" || $field_type  == "truefalse" || $field_type  == "radio" || $field_type == "dropdown"){
                     if($field_type == "yesno"){
@@ -75,7 +73,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     foreach($choice_pairs as $pair){
                         $num_val = explode(",",$pair);
                         $preset_choices[trim($num_val[0])] = trim($num_val[1]);
-                    } 
+                    }
                 }
 
                 if( in_array("@NOREAD",$annotation_arr) ){
@@ -106,28 +104,28 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             }
         }
 
-        // $this->emDebug("new script", $new_script);
-        
+        $this->emDebug("new script", $new_script);
+
         //SET UP THE INITIAL call_vars SESSION VARIABLES to run the script
         if(!is_null($storage_key)){
             $this->setTempStorage($storage_key, "ivr_language", $this->ivr_language);
             $this->setTempStorage($storage_key, "ivr_voice", $this->ivr_voice);
-            $this->setTempStorage($storage_key, "script_instrument", $this->script_instrument); 
+            $this->setTempStorage($storage_key, "script_instrument", $this->script_instrument);
             $this->setTempStorage($storage_key, "ivr_dictionary_script", $new_script);
 
             $this->setTempStorage($storage_key, "storage_key", $storage_key);
             $this->setTempStorage($storage_key, "last_step", $last_step["field_name"]);
             $this->setTempStorage($storage_key, "previous_step", null);
-           
+
             $first_step = current($new_script);
             $this->setTempStorage($storage_key, "current_step", $first_step["field_name"]);
 
             //Lets PreGenerate a Record, So it wont need to do it later...
             // $next_id        = $this->getNextAvailableRecordId(PROJECT_ID);
             // $this->setTempStorage($storage_key, "record_id", $next_id);
-            
+
             // $startTS    = microtime(true);
-            // $data = array("record_id" => $next_id); 
+            // $data = array("record_id" => $next_id);
             // $r    = \REDCap::saveData('json', json_encode(array($data)) );
             // if(empty($r["errors"])){
             //     $this->emDebug("pregenerated record id $next_id", microtime(true) - $startTS);
@@ -150,7 +148,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //has branching
                 if($record_id){
                     //has record_id
-                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
+                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id);
                     if($valid){
                         // $this->emDebug("descriptive with branching, branching valid, have record_id" , $this_step, $branching_logic);
                         array_push($container, $current_step);
@@ -180,7 +178,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 //has branching
                 if($record_id){
                     //has record_id
-                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id); 
+                    $valid = \REDCap::evaluateLogic($branching_logic, PROJECT_ID, $record_id);
                     if($valid){
                         array_push($container, $current_step);
                     }else{
@@ -191,7 +189,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                                 $next = true;
                                 continue; //to next element
                             }
-            
+
                             if($next && !$is_laststep){
                                 $container = $this->recurseCurrentSteps($next_step, $call_vars, $container);
                                 break;
@@ -208,7 +206,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         return $container;
     }
 
-    /** 
+    /**
      * FROM CURRENT STATE, PRODUCE THE CURRENT STEP OF THE SCRIPT
      * @return array
      */
@@ -218,7 +216,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         // THIS IS THE CURRENT STEP, BUT THERE MAY BE OTHER STEPS TO FLOW DOWN TO IF THIS IS ONLY A DESCRIPTIVE TEXT
         $this_step          = $call_vars["current_step"];
         $current_step       = $call_vars["ivr_dictionary_script"][$this_step];
-        
+
         // GATHER UP STEPs UNTIL REACHING An input step (evaluate branching if need be)
         $total_fields_in_step = $this->recurseCurrentSteps($current_step, $call_vars, array());
         $this->emDebug("FIELDS IN CURRENT STEP", $current_step, $total_fields_in_step);
@@ -234,8 +232,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $current_annotation     = $step["annotation"];
             $laststep               = array_key_exists("laststep",$step);
 
-            // SPLIT UP "say" text into discreet say blocks by line break 
-            // parse any special {{instructions}} 
+            // SPLIT UP "say" text into discreet say blocks by line break
+            // parse any special {{instructions}}
             // say each line with a .5 second pause in between
             $temp_say       = explode(PHP_EOL, $current_step_say );
             foreach($temp_say as $say_line){
@@ -244,7 +242,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                     if(!empty($match_arr[0])){
                         $action = $match_arr[1][0];
                         $value  = is_numeric($match_arr[2][0]) ? ceil($match_arr[2][0]) : $match_arr[2][0];
-                        
+
                         if($action == "PAUSE"){
                             $say_arr[] = array("pause" => $value);
                         }else if($action == "CALLFORWARD"){
@@ -274,8 +272,8 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         $voicemail      = $current_step_vm;
         $expected_digs  = $current_step_expected;
         $annotation     = $current_annotation;
-        
-        
+
+
         //may need to repeat
         if(array_key_exists("repeat" , $call_vars)){
             array_unshift($say_arr, array("say" => "The previous input was unexpected. Please try again.") );
@@ -289,19 +287,19 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             if($step_name == $current_step_name){
                 $next = true;
                 continue;
-            }             
+            }
 
             if($next){
                 $next_step = $step["field_name"];
                 break;
             }
         }
-       
+
         $speaker        = $call_vars["ivr_voice"];
         $accent         = $call_vars["ivr_language"];
         $voicelang_opts = array('voice' => $speaker, 'language' => $accent);
         $gather_options = array('numDigits' => $expected_digs);
-        
+
         if($annotation != "@NOREAD" && $annotation != "@SOUNDFILE"){
             if($expected_digs > 1){
                 $gather_options["finishOnKey"] = "#";
@@ -320,26 +318,26 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         if(empty($current_step_vm)){
             // $gather_options[] = "";
             // gotta be careful using gather method, it really seems to add a long pause when jumping back to response object context
-            $gather = $response->gather($gather_options); 
+            $gather = $response->gather($gather_options);
         }
-    
-       
+
+
 
         // SAY EVERYTHING IN THE SAY BLOCK FIRST (OR DIAL OR PAUSE)
         $second_last    = count($say_arr) - 1;
         foreach($say_arr as $i =>  $method_value){
             if(array_key_exists("pause", $method_value) ){
                 $pause_value = ceil($method_value["pause"]);
-                
+
                 if(!empty($current_step_vm)){
                     $response->pause(['length' => $pause_value]);
                 }else{
                     $gather->pause(['length' => $pause_value]);
                 }
-                
-                
+
+
             }else if(array_key_exists("dial", $method_value) ){
-                $response->dial($method_value["dial"]);  
+                $response->dial($method_value["dial"]);
                 //RETURN HERE CAUSE WE ARENT COMING BACK TO THIS CALL SESSION
                 return;
             }else if(array_key_exists("play", $method_value) ){
@@ -349,14 +347,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
                 }
                 $url        = $method_value["play"];
                 $laststep   = $method_value["laststep"];
-                $loop   = $i == $second_last && empty($voicemail) && !$laststep ? array("loop" => 3) : array(); 
+                $loop   = $i == $second_last && empty($voicemail) && !$laststep ? array("loop" => 3) : array();
 
                 $gather->play($url, $loop);
             }else{
                 if(!empty($current_step_vm)){
-                    $response->say($method_value["say"], $voicelang_opts); 
+                    $response->say($method_value["say"], $voicelang_opts);
                 }else{
-                    $gather->say($method_value["say"], $voicelang_opts); 
+                    $gather->say($method_value["say"], $voicelang_opts);
                 }
                 //THERE IS A NATURAL SMALL PAUSE BETWEEN DIFFERNT SAY BLOCKS
             }
@@ -374,7 +372,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $txn_webhook = $this->getURL("pages/txn_webhook.php",true,true);
             $response->record(['timeout' => $voicemail["timeout"], 'maxLength' => $voicemail["length"], 'transcribeCallback' => $txn_webhook, "finishOnKey" => "#"]);
         }
-        
+
         //3 RESET CALL VARS FOR NEXT IVR STEP
         $storage_key = $call_vars["storage_key"];
         $this->setTempStorage($storage_key, "previous_step", $current_step_name);
@@ -409,12 +407,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         if(empty($r["errors"])){
             $this->emDebug("SAVED STEP???? step?", $data);
         }else{
-            $this->emDebug("Not saving? what happenged?", $r["errors"]);
+            $this->emDebug("Not saving? what happenged?", $r["errors"], $data);
         }
 
         return $call_vars;
     }
-
 
     public function vmTranscriptionPostbackHandler($recording_url, $txn_text){
         $this->emDebug("find this txn url and save txn text", $recording_url, $txn_text);
@@ -452,14 +449,14 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
             $msg_arr[]	    = "<p><a href='".$recording_url."'>Click to listen to voicemail.</a></p>";
             $msg_arr[]      = "<p>Here is computer generated voice transcription (accuracy varies)<p>";
             $msg_arr[]      = "<blockquote>$txn_text</blockquote>";
-            
+
             $to     = $this->getProjectSetting("vm_email");
             $from   = $this->getProjectSetting("vm_email_from");
-            
+
             if(empty($to)){
                 return;
             }
-            
+
             $e = \REDCap::email($to, $from , $subject, implode("\r\n", $msg_arr));
             if($e){
                 $this->emDebug("email succesfully sent", $e);
@@ -467,11 +464,11 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         }
     }
 
-    public function handleSoundFiles($step_name){        
+    public function handleSoundFiles($step_name){
         //EXTRACT THE EDOC INFORMATION FROM RC DB, NO BUILT IN METHODS TO GET THIS DATA
-        $sql        = "SELECT doc_id, stored_name, mime_type, doc_name, doc_size, file_extension, stored_date 
+        $sql        = "SELECT doc_id, stored_name, mime_type, doc_name, doc_size, file_extension, stored_date
                         FROM redcap_metadata INNER JOIN redcap_edocs_metadata
-                        ON redcap_metadata.edoc_id = redcap_edocs_metadata.doc_id 
+                        ON redcap_metadata.edoc_id = redcap_edocs_metadata.doc_id
                         WHERE redcap_metadata.project_id = ? AND redcap_metadata.field_name = ?";
         $parameters = array(PROJECT_ID, $step_name);
 
@@ -505,7 +502,7 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         // TODO NEED TO UNLINK THE TEMP FILE PATH
         // MAYBE PASS IN ARRAY WITH Call_vars and delete on hang up ?
         // unlink($doc_temp_path);
-        
+
         $qs = array(
              "mime_type=$mime_type"
             ,"doc_temp_path=$doc_temp_path"
@@ -517,27 +514,28 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         if(!empty($hard_domain)){
             $audio_file = str_replace("http://localhost",$hard_domain, $audio_file);
         }
-        
-        // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file); 
+
+        // $this->emDebug("The NO AUTH URL FOR AUDIO FILE", $audio_file);
         return $audio_file;
     }
 
     /**
      * Set Temp Store Proj Settings
-     * @param $key 
+     * @param $key
      */
     public function setTempStorage($storekey, $k, $v) {
         if(!is_null($storekey)){
             $temp = $this->getTempStorage($storekey);
             $temp[$k] = $v;
+
             $this->setProjectSetting($storekey, json_encode($temp));
         }
-        return; 
+        return;
     }
 
     /**
      * Get Temp Store Proj Settings
-     * @param $key 
+     * @param $key
      */
     public function getTempStorage($storekey) {
         if(!is_null($storekey)){
@@ -551,13 +549,13 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
 
     /**
      * rEMOVE Temp Store Proj Settings
-     * @param $key 
+     * @param $key
      */
     public function removeTempStorage($storekey) {
         $this->removeProjectSetting($storekey);
         return;
     }
-    
+
 
     /**
      * GET Next available RecordId in a project
@@ -579,5 +577,43 @@ class IVRStandAlone extends \ExternalModules\AbstractExternalModule {
         return $next_id;
     }
 
+
+    public function callVarsCleanupCron(){
+        $now_ts     = strtotime( Date("Y-m-d") );
+        $for_delete = [];
+
+        //IS TWILIO CALLID ALWAYS 34 length?
+        //TODO ANYWAY TO PULL external_module_id dynamically?
+        //$this->emDebug("framework", $this->framework->getEnabledModules(PROJECT_ID)) ;
+        $external_module_id = 146;
+        $parameters         = array($external_module_id, 34);
+        $sql                = "SELECT *
+                                FROM redcap_external_module_settings
+                                WHERE external_module_id = ?
+                                AND length(`key`) = ?";
+
+        $results    = $this->framework->query($sql, $parameters);
+        while ($row = $results->fetch_assoc()) {
+            if(!empty($row)){
+                $data = $row["value"];
+                if (!empty($data) && is_string($data) && is_array(json_decode($data, true))) {
+                    $data_arr   = json_decode($data, true);
+                    $call_ts    = strtotime($data_arr["call_ts"]);
+                    $day_diff   = round(($now_ts - $call_ts)/86400);
+                    if($day_diff >= 1){
+                        array_push($for_delete, $data_arr["storage_key"]);
+                    }
+                }
+            }
+        }
+
+        if(count($for_delete)){
+            $delete_arr     = str_repeat('?,', count($for_delete) - 1) . '?';
+            $delete_query   = "DELETE FROM redcap_external_module_settings WHERE `key` IN ($delete_arr)";
+            $results        = $this->framework->query($delete_query, $for_delete);
+        }
+        return false;
+    }
 }
 ?>
+

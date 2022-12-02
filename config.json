@@ -21,14 +21,14 @@
 	],
 
 	"framework-version": 5,
-	
+
 	"permissions": [
 		"redcap_module_system_enable",
 		"redcap_module_project_enable",
 		"redcap_module_save_configuration"
 	],
-	
-	"enable-every-page-hooks-on-system-pages": false,	
+
+	"enable-every-page-hooks-on-system-pages": false,
 
 	"links": {
 		"project": [
@@ -222,8 +222,15 @@
 			"type": "checkbox"
 		}
 	],
-
-
+    "crons": [
+        {
+            "cron_name": "call_vars_cleanup",
+            "cron_description": "This cron will run daily to clean up the temp store of call responses.",
+            "method": "callVarsCleanupCron",
+            "cron_frequency": "86400",
+            "cron_max_run_time": "3600"
+        }
+    ],
 	"system-settings": [
 		{
 			"key": "enable-system-debug-logging",
